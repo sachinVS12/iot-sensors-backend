@@ -59,4 +59,20 @@ const adminLogin = asyncHandler(async (req, res, next) => {
   });
 });
 
-module.exports = { login };
+// create company
+const createCompany = asyncHandler(async (req, res, next) => {
+  const { name, email, phonenumber, address, label } = req.body;
+  const company = await Company.findOne({ name });
+  if (company) {
+    return next(new ErrorResponse("Company already exists!", 409));
+  }
+
+  const newCompany = new Company({ name, email, phonenumber, address });
+  await newCompany.save();
+  res.status(201).json({
+    success: true,
+    data: newCompany,
+  });
+});
+
+module.exports = { login, adminLogin, createCompany };
