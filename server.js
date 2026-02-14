@@ -20,12 +20,12 @@ const logger = winston.createLogger({
   level: "info",
   format: winston.format.combine(
     winston.format.timestamp(),
-    winston.format.json()
+    winston.format.json(),
   ),
   transports: [
     new winston.transports.File({ filename: "error.log", level: "error" }),
     new winston.transports.File({ filename: "combined.log" }),
-    new winston.transports.Console() // added for development
+    new winston.transports.Console(), // added for development
   ],
 });
 
@@ -33,12 +33,14 @@ const logger = winston.createLogger({
 app.use(express.json());
 app.use(fileupload());
 app.use(express.urlencoded({ extended: false }));
-app.use(cors({ 
-  origin: "http://localhost:3000", 
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  exposedHeaders: ['Content-Length', 'Content-Disposition'],
-  maxAge: 86400
-}));
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    exposedHeaders: ["Content-Length", "Content-Disposition"],
+    maxAge: 86400,
+  }),
+);
 app.use(cookieParser());
 
 app.use((req, res, next) => {
