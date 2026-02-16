@@ -90,4 +90,24 @@ const getSingleCompany = asyncHandler(async (req, res, next) => {
   });
 });
 
-module.exports = { login, adminLogin, createCompany, getSingleCompany };
+//delete company
+const deleteCompany = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const company = await Company.findById(id);
+  if (!company) {
+    return next(new ErrorResponse(`No company found with id ${id}`, 404));
+  }
+  await company.deleteOne();
+  res.status(200).json({
+    success: true,
+    data: [],
+  });
+});
+
+module.exports = {
+  login,
+  adminLogin,
+  createCompany,
+  getSingleCompany,
+  deleteCompany,
+};
