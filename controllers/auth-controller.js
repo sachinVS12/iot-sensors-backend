@@ -75,4 +75,19 @@ const createCompany = asyncHandler(async (req, res, next) => {
   });
 });
 
-module.exports = { login, adminLogin, createCompany };
+//get single company
+const getSingleCompany = asyncHandler(async (req, res, next) => {
+  const { companyId } = req.params;
+  const company = await Company.findById(companyId);
+  if (!company) {
+    return next(
+      new ErrorResponse(`No company found with id ${companyId}`, 404),
+    );
+  }
+  res.status(200).json({
+    success: true,
+    data: company,
+  });
+});
+
+module.exports = { login, adminLogin, createCompany, getSingleCompany };
