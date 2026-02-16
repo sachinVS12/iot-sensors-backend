@@ -1,7 +1,6 @@
 const winston = require("winston");
 const connectDB = require("./env/db");
 const express = require("express");
-const morgan = require("morgan");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const fileupload = require("express-fileupload");
@@ -9,13 +8,13 @@ const errorHandler = require("./middlewares/asyncHandler");
 const dotenv = require("dotenv");
 const authRoute = require("./routers/auth-router");
 
-// Load environment variables
-dotenv.config({ path: "./.env" });
+// Load environment variables (silent)
+dotenv.config({ path: "./.env", quiet: true });
 
 // Initialize Express
 const app = express();
 
-// Logger configuration
+// Winston Logger (FILE ONLY — no console transport)
 const logger = winston.createLogger({
   level: "info",
   format: winston.format.combine(
@@ -25,7 +24,6 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.File({ filename: "error.log", level: "error" }),
     new winston.transports.File({ filename: "combined.log" }),
-    new winston.transports.Console(), // added for development
   ],
 });
 
@@ -43,14 +41,6 @@ app.use(
 );
 app.use(cookieParser());
 
-app.use((req, res, next) => {
-  res.setTimeout(600000); // 10-minute response timeout
-  logger.info(`Request: ${req.method} ${req.url}`, {
-    body: req.body,
-  });
-  next();
-});
-
 // Routes
 app.use("/api/v1/auth", authRoute);
 
@@ -58,10 +48,10 @@ app.use("/api/v1/auth", authRoute);
 app.use(errorHandler);
 
 // Database connection
-connectDB();
+connectDB(); // should already console.log success inside db file
 
 // Start server
 const port = process.env.PORT || 5000;
 app.listen(port, "0.0.0.0", () => {
-  logger.info(`API Server running on port ${port}`);
+  console.log(`API Server running on port ${port}`);
 });

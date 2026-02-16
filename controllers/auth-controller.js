@@ -3,6 +3,7 @@ const asyncHandler = require("../middlewares/asyncHandler");
 const Admin = require("../models/admin-model");
 const User = require("../models/user-model");
 const Manager = require("../models/manager-model");
+const Company = require("../models/company-model");
 const ErrorResponse = require("../utils/errorResponse"); // new utility
 
 // Login

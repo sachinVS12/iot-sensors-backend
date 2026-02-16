@@ -58,3 +58,24 @@
 {"level":"info","message":"API Server running on port 5000","timestamp":"2026-02-13T12:37:50.985Z"}
 {"level":"info","message":"API Server running on port 5000","timestamp":"2026-02-14T04:46:42.549Z"}
 {"level":"info","message":"API Server running on port 5000","timestamp":"2026-02-14T04:46:55.321Z"}
+{"level":"info","message":"API Server running on port 5000","timestamp":"2026-02-16T10:53:48.831Z"}
+{"body":{"address":"Banglore","email":"sachin@gmail.com","lable":"sarayu","name":"micorsoft","phonnumber":"12345678"},"level":"info","message":"Request: POST /api/auth/createcompany","timestamp":"2026-02-16T10:58:23.864Z"}
+{"level":"info","message":"API Server running on port 5000","timestamp":"2026-02-16T10:59:49.771Z"}
+{"body":{"address":"Banglore","email":"sachin@gmail.com","lable":"sarayu","name":"micorsoft","phonnumber":"12345678"},"level":"info","message":"Request: POST /api/auth/createcompany","timestamp":"2026-02-16T10:59:52.389Z"}
+{"body":{"address":"Banglore","email":"sachin@gmail.com","lable":"sarayu","name":"micorsoft","phonnumber":"12345678"},"level":"info","message":"Request: POST /api/auth/createcompany","timestamp":"2026-02-16T11:00:48.417Z"}
+{"level":"info","message":"API Server running on port 5000","timestamp":"2026-02-16T11:03:01.228Z"}
+{"body":{"address":"Banglore","email":"sarayu@gmail.com","lable":"sarayu","name":"micorsoft","phonnumber":"12345678"},"level":"info","message":"Request: POST /api/auth/createCompany","timestamp":"2026-02-16T11:03:04.212Z"}
+{"level":"info","message":"API Server running on port 5000","timestamp":"2026-02-16T11:29:24.812Z"}
+{"body":{"address":"Banglore","email":"sarayu@gmail.com","lable":"sarayu","name":"micorsoft","phonnumber":"12345678"},"level":"info","message":"Request: POST /api/auth/createCompany","timestamp":"2026-02-16T11:29:29.178Z"}
+{"body":{"address":"Banglore","email":"sachin@gmail.com","lable":"sarayu","name":"micorsoft","phonnumber":"12345678"},"level":"info","message":"Request: POST /api/auth/createcompany","timestamp":"2026-02-16T11:29:58.408Z"}
+{"level":"info","message":"API Server running on port 5000","timestamp":"2026-02-16T11:32:59.115Z"}
+{"body":{"address":"Banglore","email":"sarayu@gmail.com","lable":"sarayu","name":"micorsoft","phonnumber":"12345678"},"level":"info","message":"Request: POST /api/v1/auth/createCompany","timestamp":"2026-02-16T11:33:00.473Z"}
+{"level":"info","message":"API Server running on port 5000","timestamp":"2026-02-16T11:47:32.149Z"}
+{"body":{"address":"123 Silicon Valley, CA","email":"info@techsolutions.com","name":"Tech Solutions Ltd","phonenumber":"9876543210"},"level":"info","message":"Request: POST /api/v1/auth/companies","timestamp":"2026-02-16T11:47:34.951Z"}
+{"level":"info","message":"API Server running on port 5000","timestamp":"2026-02-16T12:18:06.724Z"}
+{"body":{"address":"123 Silicon Valley, CA","email":"info@techsolutions.com","name":"Tech Solutions Ltd","phonenumber":"9876543210"},"level":"info","message":"Request: POST /api/v1/auth/companies","timestamp":"2026-02-16T12:18:20.976Z"}
+{"body":{"address":"banaglore","email":"sarayu@gmail.com","name":"sarayu","phonenumber":"9876543210"},"level":"info","message":"Request: POST /api/v1/auth/companies","timestamp":"2026-02-16T12:19:16.693Z"}
+{"level":"info","message":"API Server running on port 5000","timestamp":"2026-02-16T12:24:27.087Z"}
+{"body":{"address":"Banglore","email":"sachin@gmail.com","lable":"sarayu","name":"micorsoft","phonenumber":"12345678"},"level":"info","message":"Request: POST /api/v1/auth/createCompany","timestamp":"2026-02-16T12:24:34.320Z"}
+{"level":"info","message":"API Server running on port 5000","timestamp":"2026-02-16T12:25:01.334Z"}
+{"body":{"address":"Banglore","email":"sachin@gmail.com","name":"micorsoft","phonenumber":"12345678"},"level":"info","message":"Request: POST /api/v1/auth/createCompany","timestamp":"2026-02-16T12:25:03.391Z"}
