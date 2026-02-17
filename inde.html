@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login & Signup</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        background: white;
+        width: 100%;
+        max-width: 420px;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+      }
+
+      .tabs {
+        display: flex;
+        background: #f8f9fa;
+      }
+
+      .tab {
+        flex: 1;
+        padding: 18px;
+        text-align: center;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s;
+        border-bottom: 4px solid transparent;
+      }
+
+      .tab.active {
+        color: #667eea;
+        border-bottom: 4px solid #667eea;
+        background: white;
+      }
+
+      .form-container {
+        padding: 32px 40px;
+      }
+
+      h2 {
+        text-align: center;
+        margin-bottom: 28px;
+        color: #333;
+        font-size: 1.8rem;
+      }
+
+      .form-group {
+        margin-bottom: 22px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: #555;
+        font-weight: 500;
+      }
+
+      input {
+        width: 100%;
+        padding: 14px 16px;
+        border: 1.5px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.25s;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+      }
+
+      .btn {
+        width: 100%;
+        padding: 14px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-top: 12px;
+      }
+
+      .btn:hover {
+        background: #5a6ee0;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+      }
+
+      .toggle-link {
+        text-align: center;
+        margin-top: 20px;
+        color: #666;
+      }
+
+      .toggle-link a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .toggle-link a:hover {
+        text-decoration: underline;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="tabs">
+        <div class="tab active" data-tab="login">Login</div>
+        <div class="tab" data-tab="signup">Sign Up</div>
+      </div>
+
+      <!-- Login Form -->
+      <div class="form-container" id="login-form">
+        <h2>Welcome Back</h2>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="login-email">Email</label>
+            <input
+              type="email"
+              id="login-email"
+              placeholder="example@gmail.com"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <input
+              type="password"
+              id="login-password"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn">Log In</button>
+        </form>
+
+        <div class="toggle-link">
+          Don't have an account? <a href="#" data-tab="signup">Sign Up</a>
+        </div>
+      </div>
+
+      <!-- Signup Form -->
+      <div class="form-container hidden" id="signup-form">
+        <h2>Create Account</h2>
+
+        <form id="signupForm">
+          <div class="form-group">
+            <label for="signup-name">Full Name</label>
+            <input
+              type="text"
+              id="signup-name"
+              placeholder="John Doe"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="signup-email">Email</label>
+            <input
+              type="email"
+              id="signup-email"
+              placeholder="example@gmail.com"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="signup-password">Password</label>
+            <input
+              type="password"
+              id="signup-password"
+              placeholder="At least 8 characters"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="signup-confirm">Confirm Password</label>
+            <input
+              type="password"
+              id="signup-confirm"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn">Sign Up</button>
+        </form>
+
+        <div class="toggle-link">
+          Already have an account? <a href="#" data-tab="login">Login</a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const tabs = document.querySelectorAll(".tab, .toggle-link a");
+      const loginForm = document.getElementById("login-form");
+      const signupForm = document.getElementById("signup-form");
+
+      function switchTab(tabName) {
+        // Update active tab
+        document
+          .querySelectorAll(".tab")
+          .forEach((t) => t.classList.remove("active"));
+        document
+          .querySelector(`.tab[data-tab="${tabName}"]`)
+          ?.classList.add("active");
+
+        // Show correct form
+        if (tabName === "login") {
+          loginForm.classList.remove("hidden");
+          signupForm.classList.add("hidden");
+        } else {
+          loginForm.classList.add("hidden");
+          signupForm.classList.remove("hidden");
+        }
+      }
+
+      // Tab switching
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", (e) => {
+          e.preventDefault();
+          const tabName = tab.getAttribute("data-tab");
+          switchTab(tabName);
+        });
+      });
+
+      // Basic form validation (client-side demo)
+      document.getElementById("loginForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        alert("Login submitted!");
+        // Here you would normally send data to backend
+      });
+
+      document.getElementById("signupForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const password = document.getElementById("signup-password").value;
+        const confirm = document.getElementById("signup-confirm").value;
+
+        if (password !== confirm) {
+          alert("Passwords don't match!");
+          return;
+        }
+
+        if (password.length < 8) {
+          alert("Password must be at least 8 characters long!");
+          return;
+        }
+
+        alert("Sign up successful!");
+        // Here you would send data to backend
+      });
+    </script>
+  </body>
+</html>
