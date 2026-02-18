@@ -58,6 +58,7 @@ const adminLogin = asyncHandler(async (req, res, next) => {
   });
 });
 
+// create company
 const createCompany = asyncHandler(async (req, res, next) => {
   const { name, email, phonenumber, label, address } = req.body;
   const company = await company.findById({ name });
