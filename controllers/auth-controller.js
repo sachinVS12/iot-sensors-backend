@@ -105,6 +105,51 @@ const deleteCompany = asyncHandler(async (req, res, next) => {
   });
 });
 
+const createSupervisor = asyncHandler(async (req, res, next) => {
+  const { companyId } = req.params;
+  const { name, email, password, phonenumber, mqttTopic } = req.body;
+  console.log(password);
+  const findSupervisor = await Supervisor.findOne({ email });
+  if (findSupervisor) {
+    return next(new ErrorResponse("Email already exists!", 500));
+  }
+  const supervisor = await Supervisor.create({
+    name,
+    email,
+    password,
+    phonenumber,
+    mqttTopic,
+    company: companyId,
+  });
+  res.status(201).json({
+    success: true,
+    data: supervisor,
+  });
+});
+
+const createSupervisorAndAssignManager = asyncHandler(
+  async (req, res, next) => {
+    const { companyId, managerId } = req.params;
+    const { name, email, password, phonenumber } = req.body;
+    const findSupervisor = await Supervisor.findOne({ email });
+    if (findSupervisor) {
+      return next(new ErrorResponse("Email already exist!", 500));
+    }
+    const supervisor = await Supervisor.create({
+      name,
+      email,
+      password,
+      phonenumber,
+      company: companyId,
+      manager: managerId,
+    });
+    res.status(201).json({
+      success: true,
+      data: supervisor,
+    });
+  },
+);
+
 module.exports = {
   login,
   adminLogin,
