@@ -156,4 +156,6 @@ module.exports = {
   createCompany,
   getSingleCompany,
   deleteCompany,
+  createSupervisor,
+  createSupervisorAndAssignManager,
 };

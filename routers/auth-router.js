@@ -14,5 +14,5 @@ router.route("/admin/login").post(adminLogin);
 router.route("/companies").post(createCompany);
 router.route("/company/:companyId").get(getSingleCompany);
 router.route("/companies/:id").delete(deleteCompany);
-router.route("/create/createSupervisor").post(createSupervisor);
+router.route("/createSupervisor").post(createSupervisor);
 module.exports = router;
