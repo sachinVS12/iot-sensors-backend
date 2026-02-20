@@ -17,52 +17,38 @@ const employeeSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
-    company: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Company",
-      required: true,
+    topics: {
+      type: String,
+      required: [],
     },
-    supervisor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Supervisor",
-      required: false,
+    company: {
+      type: mongoose.Types.Schema.ObjectId,
+      ref: "company",
+    },
+    favorates: {
+      type: String,
+      required: [],
+    },
+    graphwl: {
+      type: String,
+      required: [],
     },
     password: {
       type: String,
-      select: false,
-      required: [true, "Password is required"],
-    },
-    topics: {
-      type: [String],
-    },
-    favorites: {
-      type: [String],
-      default: [],
-    },
-    graphwl: {
-      type: [String],
-      default: [],
+      required: true,
     },
     layout: {
       type: String,
       default: "layout1",
     },
-    headerOne: {
-      type: "String",
-      required: true,
-    },
-    headerTwo: {
-      type: "String",
-      required: false,
-    },
-    assignedDigitalMeters: {
+    assigneddigitalmeters: {
       type: [
         {
-          topic: String,
-          meterType: String,
-          minValue: Number,
-          maxValue: Number,
-          ticks: Number,
+          topics: String,
+          metertype: String,
+          minvalue: Number,
+          maxvalue: Number,
+          tick: Number,
           label: String,
         },
       ],
@@ -78,35 +64,38 @@ const employeeSchema = new mongoose.Schema(
   },
 );
 
+// pre-save middleware hash password before save database
 employeeSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
-employeeSchema.methods.getToken = function () {
+// method to verify jwt token sigedup and loggedin
+employeeSchema.method.getToken = function () {
   return jwt.sign(
     {
       id: this._id,
       name: this.name,
       email: this.email,
       role: this.role,
-      assignedDigitalMeters: this.assignedDigitalMeters,
     },
-    process.env.JWT_SECRET,
+    process.JWT_SECRET,
     {
       expiresIn: "3d",
     },
   );
 };
 
-employeeSchema.methods.verifyPass = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+// method to enterpassword into existing password
+employeeSchema.method.verifypass = async function (enterpassword) {
+  return await bcrypt.compare(enterpassword, this.password);
 };
 
-const Employee = mongoose.model("Employee", employeeSchema);
+// create the model
+const employee = mongoose.model("employee", employeeSchema);
 
-module.exports = Employee;
+// exports model
+exports.module = employee;
