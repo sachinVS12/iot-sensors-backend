@@ -125,3 +125,149 @@ router.get("/all-topics-labels", async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+router.post("/get-single-topic-label", async (req, res) => {
+  try {
+    const { topic } = req.body;
+    const cacheKey = `${CACHE_PREFIX}topic-label:${topic}`;
+    const cachedData = await safeRedisGet(cacheKey);
+
+    if (cachedData) {
+      return res.status(200).json(JSON.parse(cachedData));
+    }
+
+    const label = await TopicsModel.find(
+      { topic },
+      { label: 1, _id: 0 },
+    ).lean();
+    const response = { success: true, data: label };
+
+    await safeRedisSet(cacheKey, response, TTL_LONG);
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+router.put("/topic-label-update/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { updatedLabel } = req.body;
+    const topic = await TopicsModel.findById(id);
+    topic.label = updatedLabel;
+    await topic.save();
+
+    await Promise.all([
+      safeRedisDel(`${CACHE_PREFIX}all-topics-labels`),
+      safeRedisDel(`${CACHE_PREFIX}topic-label:${topic.topic}`),
+    ]);
+
+    res.status(200).json({ success: true, data: [] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post("/subscribe", (req, res) => {
+  const { topic } = req.body;
+  if (!topic) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Topic is required" });
+  }
+
+  subscribeToTopic(topic);
+  res.json({ success: true, message: `Subscribed to topic: ${topic}` });
+});
+
+router.post("/create-tagname", async (req, res) => {
+  try {
+    const { topic, device, label } = req.body;
+    const cacheKey = `${CACHE_PREFIX}topic-exists:${topic}`;
+    const cachedExists = await safeRedisGet(cacheKey);
+
+    if (cachedExists === "true") {
+      return res.status(400).json({
+        success: false,
+        message: "TagName already exists!",
+      });
+    }
+
+    const existingTopic = await TopicsModel.findOne({ topic }).lean();
+    if (existingTopic) {
+      await safeRedisSet(cacheKey, "true", TTL_LONG);
+      return res.status(400).json({
+        success: false,
+        message: "TagName already exists!",
+      });
+    }
+
+    await TopicsModel.create({ topic, device, label });
+    await safeRedisSet(cacheKey, "true", TTL_LONG);
+
+    await Promise.all([
+      safeRedisDel(`${CACHE_PREFIX}all-topics-labels`),
+      safeRedisDel(`${CACHE_PREFIX}get-all-tagname`),
+      safeRedisDel(`${CACHE_PREFIX}recent-5-tagname`),
+    ]);
+
+    res.status(201).json({ success: true, data: [] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+router.get("/get-all-subscribedtopics", async (req, res) => {
+  try {
+    const cacheKey = `${CACHE_PREFIX}subscribed-topics`;
+    const cachedData = await safeRedisGet(cacheKey);
+
+    if (cachedData) {
+      return res.status(200).json(JSON.parse(cachedData));
+    }
+
+    const subscribedTopicList = await SubscribedTopic.find(
+      {},
+      { _id: 0, topic: 1 },
+    ).lean();
+    const topics = subscribedTopicList.map((item) => item.topic);
+    const response = { success: true, data: topics };
+
+    await safeRedisSet(cacheKey, response, TTL_MEDIUM);
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+router.get("/get-all-tagname", async (req, res) => {
+  try {
+    const cacheKey = `${CACHE_PREFIX}get-all-tagname`;
+    const cachedData = await safeRedisGet(cacheKey);
+
+    if (cachedData) {
+      return res.status(200).json(JSON.parse(cachedData));
+    }
+
+    const topics = await TopicsModel.find().select("topic -_id").lean();
+    const topicsWithStatus = await Promise.all(
+      topics.map(async (t) => {
+        const countKey = `${CACHE_PREFIX}msg-count:${t.topic}`;
+        let messageCount = await safeRedisGet(countKey);
+
+        if (!messageCount) {
+          messageCount = await MessagesModel.countDocuments({ topic: t.topic });
+          await safeRedisSet(countKey, messageCount.toString(), TTL_LONG);
+        }
+
+        return { topic: t.topic, isEmpty: parseInt(messageCount) === 0 };
+      }),
+    );
+
+    const response = { success: true, data: topicsWithStatus };
+    await safeRedisSet(cacheKey, response, TTL_LONG);
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
