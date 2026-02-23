@@ -7,6 +7,8 @@ const fileupload = require("express-fileupload");
 const errorHandler = require("./middlewares/asyncHandler");
 const dotenv = require("dotenv");
 const authRoute = require("./routers/auth-router");
+const asyncHandler = require("./middlewares/asyncHandler");
+const ErrorResponse = require("./utils/errorResponse");
 
 // Load environment variables (silent)
 dotenv.config({ path: "./.env", quiet: true });
