@@ -381,3 +381,205 @@ router.post("/create-tagname", async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
+
+router.get("/get-all-subscribedtopics", async (req, res) => {
+  try {
+    const cacheKey = `${CACHE_PREFIX}subscribed-topics`;
+    const cachedData = await safeRedisGet(cacheKey);
+
+    if (cachedData) {
+      return res.status(200).json(JSON.parse(cachedData));
+    }
+
+    const subscribedTopicList = await SubscribedTopic.find(
+      {},
+      { _id: 0, topic: 1 },
+    ).lean();
+    const topics = subscribedTopicList.map((item) => item.topic);
+    const response = { success: true, data: topics };
+
+    await safeRedisSet(cacheKey, response, TTL_MEDIUM);
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+router.get("/get-all-tagname", async (req, res) => {
+  try {
+    const cacheKey = `${CACHE_PREFIX}get-all-tagname`;
+    const cachedData = await safeRedisGet(cacheKey);
+
+    if (cachedData) {
+      return res.status(200).json(JSON.parse(cachedData));
+    }
+
+    const topics = await TopicsModel.find().select("topic -_id").lean();
+    const topicsWithStatus = await Promise.all(
+      topics.map(async (t) => {
+        const countKey = `${CACHE_PREFIX}msg-count:${t.topic}`;
+        let messageCount = await safeRedisGet(countKey);
+
+        if (!messageCount) {
+          messageCount = await MessagesModel.countDocuments({ topic: t.topic });
+          await safeRedisSet(countKey, messageCount.toString(), TTL_LONG);
+        }
+
+        return { topic: t.topic, isEmpty: parseInt(messageCount) === 0 };
+      }),
+    );
+
+    const response = { success: true, data: topicsWithStatus };
+    await safeRedisSet(cacheKey, response, TTL_LONG);
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+router.get("/get-recent-5-tagname", async (req, res) => {
+  try {
+    const cacheKey = `${CACHE_PREFIX}recent-5-tagname`;
+    const cachedData = await safeRedisGet(cacheKey);
+
+    if (cachedData) {
+      return res.status(200).json(JSON.parse(cachedData));
+    }
+
+    const topicsWithMessages = await MessagesModel.distinct("topic").lean();
+    const topics = await TopicsModel.find({
+      topic: { $nin: topicsWithMessages },
+    })
+      .select("topic -_id")
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+
+    const response = { success: true, data: topics };
+    await safeRedisSet(cacheKey, response, TTL_LONG);
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+router.delete("/delete-topic/:topic", async (req, res) => {
+  try {
+    const { topic } = req.params;
+    const topicDoc = await TopicsModel.findOne({ topic }).lean();
+    if (!topicDoc) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No topic found" });
+    }
+    await TopicsModel.deleteOne({ topic });
+    await MessagesModel.deleteMany({ topic });
+
+    await Promise.all([
+      safeRedisDel(`${CACHE_PREFIX}all-topics-labels`),
+      safeRedisDel(`${CACHE_PREFIX}get-all-tagname`),
+      safeRedisDel(`${CACHE_PREFIX}recent-5-tagname`),
+      safeRedisDel(`${CACHE_PREFIX}topic-label:${topic}`),
+      safeRedisDel(`${CACHE_PREFIX}topic-exists:${topic}`),
+      safeRedisDel(`${CACHE_PREFIX}msg-count:${topic}`),
+    ]);
+
+    res.status(200).json({ success: true, message: "Topic deleted" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+router.post("/subscribe-to-all", async (req, res) => {
+  try {
+    const cacheKey = `${CACHE_PREFIX}all-topics`;
+    let topics = await safeRedisGet(cacheKey);
+
+    if (!topics) {
+      topics = await TopicsModel.find().select("topic -_id").lean();
+      await safeRedisSet(cacheKey, topics, TTL_LONG);
+    } else {
+      topics = JSON.parse(topics);
+    }
+
+    if (!topics.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No topics found to subscribe to.",
+      });
+    }
+
+    topics.forEach((t) => subscribeToTopic(t.topic));
+    await safeRedisDel(`${CACHE_PREFIX}subscribed-topics`);
+
+    res.status(200).json({
+      success: true,
+      message: "Subscribed to all topics successfully.",
+      data: topics.map((t) => t.topic),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+router.post("/unsubscribe-from-all", async (req, res) => {
+  try {
+    const cacheKey = `${CACHE_PREFIX}all-topics`;
+    let topics = await safeRedisGet(cacheKey);
+
+    if (!topics) {
+      topics = await TopicsModel.find().select("topic -_id").lean();
+      await safeRedisSet(cacheKey, topics, TTL_LONG);
+    } else {
+      topics = JSON.parse(topics);
+    }
+
+    if (!topics.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No topics found to unsubscribe from.",
+      });
+    }
+
+    const unsubscribedTopics = [];
+    topics.forEach((t) => {
+      if (isTopicSubscribed(t.topic)) {
+        unsubscribeFromTopic(t.topic);
+        unsubscribedTopics.push(t.topic);
+      }
+    });
+
+    if (!unsubscribedTopics.length) {
+      return res.status(400).json({
+        success: false,
+        message: "No topics were subscribed.",
+      });
+    }
+
+    await safeRedisDel(`${CACHE_PREFIX}subscribed-topics`);
+
+    res.status(200).json({
+      success: true,
+      message: "Unsubscribed from all subscribed topics successfully.",
+      data: unsubscribedTopics,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+router.post("/messages", (req, res) => {
+  const { topic } = req.body;
+  if (!topic) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Topic is required" });
+  }
+  const latestMessage = getLatestLiveMessage(topic);
+  if (!latestMessage) {
+    return res
+      .status(404)
+      .json({ success: false, message: "No live message available" });
+  }
+  res.json({ success: true, message: latestMessage });
+});
