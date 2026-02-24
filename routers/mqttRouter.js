@@ -648,3 +648,184 @@ router.post("/realtime-data/range", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
+router.get("/prediction/:topic", async (req, res) => {
+  const rawTopic = req.params.topic;
+  let topic = rawTopic;
+  try {
+    topic = decodeURIComponent(rawTopic);
+  } catch (e) {
+    topic = rawTopic;
+  }
+
+  const timeframe = (req.query.timeframe || "2h").toString();
+  const limitRaw = parseInt(req.query.limit, 10);
+  const horizonRaw = parseInt(req.query.horizon, 10);
+  const limit = Number.isFinite(limitRaw)
+    ? Math.min(Math.max(limitRaw, 10), 10000)
+    : 2000;
+  const horizon = Number.isFinite(horizonRaw)
+    ? Math.min(Math.max(horizonRaw, 1), 200)
+    : 30;
+
+  const startTimeSeconds = req.query.start_time
+    ? Number(req.query.start_time)
+    : null;
+  const historyKey = Number.isFinite(startTimeSeconds)
+    ? `start:${Math.floor(startTimeSeconds)}`
+    : `tf:${timeframe}`;
+  const cacheKey = `${CACHE_PREFIX}prediction:${topic}:${historyKey}:${limit}:${horizon}`;
+  const cachedData = await safeRedisGet(cacheKey);
+  if (cachedData) {
+    return res.status(200).json(JSON.parse(cachedData));
+  }
+
+  const now = moment().tz("Asia/Kolkata");
+
+  let historyFromDate;
+  if (Number.isFinite(startTimeSeconds)) {
+    historyFromDate = new Date(startTimeSeconds * 1000);
+  }
+  if (!historyFromDate) {
+    switch (timeframe) {
+      case "1H":
+        historyFromDate = now.clone().subtract(1, "hour").toDate();
+        break;
+      case "1D":
+        historyFromDate = now.clone().subtract(1, "day").toDate();
+        break;
+      case "1W":
+        historyFromDate = now.clone().subtract(1, "week").toDate();
+        break;
+      case "1M":
+        historyFromDate = now.clone().subtract(1, "month").toDate();
+        break;
+      case "2h":
+      default:
+        historyFromDate = now.clone().subtract(2, "hours").toDate();
+        break;
+    }
+  }
+
+  const predictionFromDate = now.clone().subtract(2, "hours").toDate();
+
+  try {
+    const docsDesc = await MessagesModel.find({
+      topic,
+      timestamp: { $gte: historyFromDate },
+    })
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .lean();
+
+    const docs = docsDesc.reverse();
+
+    const historical = docs
+      .map((d) => {
+        const value = parseFloat(d.message);
+        if (Number.isNaN(value)) return null;
+        return {
+          time: Math.floor(new Date(d.timestamp).getTime() / 1000),
+          value,
+        };
+      })
+      .filter(Boolean);
+
+    const predictionLimit = Math.min(limit, 2000);
+    const predictionDocsDesc = await MessagesModel.find({
+      topic,
+      timestamp: { $gte: predictionFromDate },
+    })
+      .sort({ timestamp: -1 })
+      .limit(predictionLimit)
+      .lean();
+
+    const predictionDocs = predictionDocsDesc.reverse();
+    const predictionHistorical = predictionDocs
+      .map((d) => {
+        const value = parseFloat(d.message);
+        if (Number.isNaN(value)) return null;
+        return {
+          time: Math.floor(new Date(d.timestamp).getTime() / 1000),
+          value,
+        };
+      })
+      .filter(Boolean);
+
+    let stepSeconds = 60;
+    if (predictionHistorical.length >= 3) {
+      const deltas = [];
+      for (
+        let i = Math.max(1, predictionHistorical.length - 10);
+        i < predictionHistorical.length;
+        i++
+      ) {
+        const dt =
+          predictionHistorical[i].time - predictionHistorical[i - 1].time;
+        if (dt > 0) deltas.push(dt);
+      }
+      if (deltas.length > 0) {
+        deltas.sort((a, b) => a - b);
+        stepSeconds = deltas[Math.floor(deltas.length / 2)] || 60;
+      }
+    }
+
+    const modelPoints = predictionHistorical.slice(
+      -Math.min(50, predictionHistorical.length),
+    );
+    const y = modelPoints.map((p) => p.value);
+    const n = y.length;
+
+    let slope = 0;
+    let intercept = y[n - 1] ?? 0;
+    if (n >= 2) {
+      const xMean = (n - 1) / 2;
+      const yMean = y.reduce((a, b) => a + b, 0) / n;
+      let num = 0;
+      let den = 0;
+      for (let i = 0; i < n; i++) {
+        const dx = i - xMean;
+        num += dx * (y[i] - yMean);
+        den += dx * dx;
+      }
+      slope = den === 0 ? 0 : num / den;
+      intercept = yMean - slope * xMean;
+    }
+
+    const model = { slope, intercept, stepSeconds, n };
+    predictionModels.set(topic, { ...model, updatedAt: Date.now() });
+
+    const predictions = [];
+    const lastPredictionTime =
+      predictionHistorical.length > 0
+        ? predictionHistorical[predictionHistorical.length - 1].time
+        : Math.floor(Date.now() / 1000);
+    const lastTime =
+      historical.length > 0
+        ? historical[historical.length - 1].time
+        : lastPredictionTime;
+    for (let i = 0; i < horizon; i++) {
+      const x = n + i;
+      predictions.push({
+        time: lastTime + (i + 1) * stepSeconds,
+        value: intercept + slope * x,
+      });
+    }
+
+    const response = {
+      success: true,
+      data: {
+        historical,
+        historyGraphData: historical,
+        predictions,
+        predictionGraphData: predictionHistorical,
+        model,
+      },
+    };
+
+    await safeRedisSet(cacheKey, response, TTL_SHORT);
+    return res.status(200).json(response);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
