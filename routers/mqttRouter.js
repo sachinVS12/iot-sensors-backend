@@ -583,3 +583,68 @@ router.post("/messages", (req, res) => {
   }
   res.json({ success: true, message: latestMessage });
 });
+
+router.post("/realtime-data/last-2-hours", async (req, res) => {
+  const { topic } = req.body;
+  if (!topic) {
+    return res.status(400).json({ error: "Topic is required" });
+  }
+
+  const cacheKey = `${CACHE_PREFIX}realtime-2h:${topic}`;
+  const cachedData = await safeRedisGet(cacheKey);
+
+  if (cachedData) {
+    return res.json(JSON.parse(cachedData));
+  }
+
+  try {
+    const twoHoursAgo = moment()
+      .tz("Asia/Kolkata")
+      .subtract(2, "hours")
+      .toDate();
+    const messages = await MessagesModel.find({
+      topic,
+      timestamp: { $gte: twoHoursAgo },
+    })
+      .sort({ timestamp: -1 })
+      .lean();
+
+    const response = { topic, messages };
+    await safeRedisSet(cacheKey, response, TTL_SHORT);
+    res.json(response);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+// Add this new endpoint to your existing backend routes
+router.post("/realtime-data/range", async (req, res) => {
+  const { topic, startTime, endTime } = req.body;
+  if (!topic || !startTime || !endTime) {
+    return res.status(400).json({ error: "Missing parameters" });
+  }
+
+  try {
+    const messages = await MessagesModel.find({
+      topic,
+      timestamp: {
+        $gte: new Date(startTime),
+        $lte: new Date(endTime),
+      },
+    })
+      .sort({ timestamp: 1 })
+      .lean();
+
+    res.json({
+      topic,
+      messages: messages.map((msg) => ({
+        ...msg,
+        value: parseFloat(msg.message),
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching range data:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
