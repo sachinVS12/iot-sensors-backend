@@ -1040,3 +1040,214 @@ router.post("/report-filter", async (req, res) => {
       .json({ error: "Internal Server Error", details: error.message });
   }
 });
+
+outer.post("/report-filter", async (req, res) => {
+  const {
+    topics,
+    from,
+    to,
+    filterType,
+    minValue,
+    maxValue,
+    page = 1,
+    limit = 1000,
+    aggregationMethod,
+    startTimeOfDay,
+    endTimeOfDay,
+  } = req.body;
+
+  const cacheKey = `${CACHE_PREFIX}report:${JSON.stringify({ topics, from, to, filterType, minValue, maxValue, page, limit, aggregationMethod, startTimeOfDay, endTimeOfDay })}`;
+  const cachedData = await safeRedisGet(cacheKey);
+
+  if (cachedData) {
+    return res.status(200).json(JSON.parse(cachedData));
+  }
+
+  if (!Array.isArray(topics) || topics.length === 0 || !from || !to) {
+    return res.status(400).json({
+      error: "Topics array, from date, and to date are required.",
+    });
+  }
+
+  const MAX_TOPICS = 5;
+  if (topics.length > MAX_TOPICS) {
+    return res.status(400).json({
+      error: `Too many topics. Maximum allowed is ${MAX_TOPICS}.`,
+    });
+  }
+
+  try {
+    const fromDate = moment(from).tz("Asia/Kolkata").toDate();
+    const toDate = moment(to).tz("Asia/Kolkata").toDate();
+
+    const dateRangeDays = moment(toDate).diff(moment(fromDate), "days");
+    const MAX_DAYS = 365;
+    if (dateRangeDays > MAX_DAYS) {
+      return res.status(400).json({
+        error: `Date range too large. Maximum allowed is ${MAX_DAYS} days.`,
+      });
+    }
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10) || 1000; // Default to 1000 if not provided
+    const skip = (pageNum - 1) * limitNum;
+
+    const allMessages = [];
+    let totalMessages = 0;
+
+    for (const topic of topics) {
+      const messages = await fetchMessages(topic, [], {
+        from: fromDate,
+        to: toDate,
+      });
+      allMessages.push({ topic, messages });
+      totalMessages += messages.length;
+    }
+
+    let report = [];
+    let totalRecords = 0;
+
+    // Apply time-of-day filtering if provided
+    let filteredMessages = allMessages;
+    if (startTimeOfDay || endTimeOfDay) {
+      filteredMessages = allMessages.map(({ topic, messages }) => {
+        return {
+          topic,
+          messages: messages.filter((msg) => {
+            const timestamp = moment.tz(msg.timestamp, "Asia/Kolkata");
+            const hour = timestamp.hour();
+            const minute = timestamp.minute();
+            const currentMinutes = hour * 60 + minute;
+
+            let startMinutes, endMinutes;
+            if (startTimeOfDay) {
+              const start = moment(startTimeOfDay);
+              startMinutes = start.hour() * 60 + start.minute();
+            }
+            if (endTimeOfDay) {
+              const end = moment(endTimeOfDay);
+              endMinutes = end.hour() * 60 + end.minute();
+            }
+
+            if (startMinutes !== undefined && endMinutes !== undefined) {
+              return startMinutes <= endMinutes
+                ? currentMinutes >= startMinutes && currentMinutes <= endMinutes
+                : currentMinutes >= startMinutes ||
+                    currentMinutes <= endMinutes;
+            } else if (startMinutes !== undefined) {
+              return currentMinutes >= startMinutes;
+            } else if (endMinutes !== undefined) {
+              return currentMinutes <= endMinutes;
+            }
+            return true;
+          }),
+        };
+      });
+    }
+
+    if (filterType === "minPerDay" || filterType === "maxPerDay") {
+      const dailyData = {};
+      filteredMessages.forEach(({ topic, messages }) => {
+        messages.forEach((msg) => {
+          const day = moment(msg.timestamp)
+            .tz("Asia/Kolkata")
+            .format("YYYY-MM-DD");
+          if (!dailyData[day]) dailyData[day] = {};
+          if (!dailyData[day][topic]) dailyData[day][topic] = [];
+          dailyData[day][topic].push(Number(msg.message));
+        });
+      });
+
+      report = Object.entries(dailyData).map(([day, topicsData]) => {
+        const row = { timestamp: moment(day).tz("Asia/Kolkata").toISOString() };
+        topics.forEach((topic) => {
+          const values = topicsData[topic] || [];
+          if (values.length > 0) {
+            switch (aggregationMethod) {
+              case "average":
+                row[topic] = (
+                  values.reduce((a, b) => a + b, 0) / values.length
+                ).toFixed(2);
+                break;
+              case "sum":
+                row[topic] = values.reduce((a, b) => a + b, 0);
+                break;
+              case "min":
+                row[topic] = Math.min(...values);
+                break;
+              case "max":
+                row[topic] = Math.max(...values);
+                break;
+              default:
+                row[topic] =
+                  filterType === "minPerDay"
+                    ? Math.min(...values)
+                    : Math.max(...values);
+            }
+          } else {
+            row[topic] = "N/A";
+          }
+        });
+        return row;
+      });
+
+      totalRecords = report.length;
+      report.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Default descending
+      report = report.slice(skip, skip + limitNum);
+    } else {
+      const timestampMap = new Map();
+      filteredMessages.forEach(({ topic, messages }) => {
+        messages.forEach((msg) => {
+          const timestamp = moment(msg.timestamp)
+            .tz("Asia/Kolkata")
+            .startOf("second")
+            .toISOString();
+          const value = Number(msg.message);
+
+          if (
+            filterType === "custom" &&
+            ((minValue !== undefined && value < minValue) ||
+              (maxValue !== undefined && value > maxValue))
+          ) {
+            return;
+          }
+
+          if (!timestampMap.has(timestamp)) {
+            const row = { timestamp };
+            topics.forEach((t) => (row[t] = "N/A"));
+            timestampMap.set(timestamp, row);
+          }
+
+          timestampMap.get(timestamp)[topic] = value;
+        });
+      });
+
+      report = Array.from(timestampMap.values());
+      totalRecords = report.length;
+      report.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Default descending
+      report = report.slice(skip, skip + limitNum);
+    }
+
+    if (totalRecords === 0) {
+      return res
+        .status(404)
+        .json({ error: "No data found for the given criteria." });
+    }
+
+    const response = {
+      report,
+      totalRecords,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(totalRecords / limitNum),
+    };
+
+    await safeRedisSet(cacheKey, response, TTL_MEDIUM);
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Error fetching report data:", error.message);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
+  }
+});
