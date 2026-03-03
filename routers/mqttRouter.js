@@ -1041,7 +1041,7 @@ router.post("/report-filter", async (req, res) => {
   }
 });
 
-outer.post("/report-filter", async (req, res) => {
+router.post("/report-filter", async (req, res) => {
   const {
     topics,
     from,
