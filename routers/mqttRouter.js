@@ -13,6 +13,8 @@ const moment = require("moment-timezone");
 const SubscribedTopic = require("../models/subscribed-topic-model");
 const { stringify } = require("csv-stringify");
 const redis = require("redis");
+const asyncHandler = require("../middlewares/asyncHandler");
+const ErrorResponse = require("../utils/errorResponse");
 
 const redisClient = redis.createClient({
   url: process.env.REDIS_URL || "redis://localhost:6379",
@@ -1685,5 +1687,192 @@ router.post("/report-filter-csv", async (req, res) => {
     res
       .status(500)
       .json({ error: "Internal Server Error", details: error.message });
+  }
+});
+
+//admin
+const admin = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+  const admin = await admin.findone({ email }).select("+password");
+  if (!admin) {
+    return next(new ErrorResponse("Invalid Credentials", 401));
+  }
+  const isMatch = await verifypass(password);
+  if (!isMatch) {
+    return next(new ErrorResponse("Invalid Credentials", 401));
+  }
+  const token = await admin.getToken();
+  res.status(200).json({
+    success: true,
+    token,
+  });
+});
+
+router.post("/realtime-data/custom-range", async (req, res) => {
+  const {
+    topic,
+    from,
+    to,
+    granularity,
+    minValue,
+    maxValue,
+    aggregationMethod,
+    sortOrder,
+    limit,
+    startTimeOfDay,
+    endTimeOfDay,
+  } = req.body;
+
+  const cacheKey = `${CACHE_PREFIX}custom-range:${JSON.stringify(req.body)}`;
+  const cachedData = await safeRedisGet(cacheKey);
+
+  if (cachedData) {
+    return res.json(JSON.parse(cachedData));
+  }
+
+  if (!topic || !from || !to || !granularity) {
+    return res
+      .status(400)
+      .json({ error: "Topic, from, to, and granularity are required" });
+  }
+
+  if (minValue !== undefined && (isNaN(minValue) || minValue < 0)) {
+    return res
+      .status(400)
+      .json({ error: "minValue must be a valid non-negative number" });
+  }
+  if (maxValue !== undefined && (isNaN(maxValue) || maxValue < 0)) {
+    return res
+      .status(400)
+      .json({ error: "maxValue must be a valid non-negative number" });
+  }
+  if (
+    minValue !== undefined &&
+    maxValue !== undefined &&
+    parseFloat(minValue) > parseFloat(maxValue)
+  ) {
+    return res
+      .status(400)
+      .json({ error: "minValue cannot be greater than maxValue" });
+  }
+  if (
+    aggregationMethod &&
+    !["average", "sum", "min", "max"].includes(aggregationMethod)
+  ) {
+    return res.status(400).json({
+      error: "aggregationMethod must be one of: average, sum, min, max",
+    });
+  }
+  if (sortOrder && !["asc", "desc"].includes(sortOrder)) {
+    return res
+      .status(400)
+      .json({ error: "sortOrder must be either 'asc' or 'desc'" });
+  }
+  if (limit !== undefined && (isNaN(limit) || limit <= 0)) {
+    return res.status(400).json({ error: "limit must be a positive number" });
+  }
+  if (
+    startTimeOfDay &&
+    !moment(startTimeOfDay, moment.ISO_8601, true).isValid()
+  ) {
+    return res
+      .status(400)
+      .json({ error: "startTimeOfDay must be a valid ISO 8601 date string" });
+  }
+  if (endTimeOfDay && !moment(endTimeOfDay, moment.ISO_8601, true).isValid()) {
+    return res
+      .status(400)
+      .json({ error: "endTimeOfDay must be a valid ISO 8601 date string" });
+  }
+
+  try {
+    const fromDate = moment.tz(from, "Asia/Kolkata").toDate();
+    const toDate = moment.tz(to, "Asia/Kolkata").toDate();
+
+    if (fromDate > toDate) {
+      return res
+        .status(400)
+        .json({ error: "'From' date cannot be later than 'To' date" });
+    }
+
+    let startHour, startMinute, endHour, endMinute;
+    if (startTimeOfDay) {
+      const start = moment(startTimeOfDay);
+      startHour = start.hour();
+      startMinute = start.minute();
+    }
+    if (endTimeOfDay) {
+      const end = moment(endTimeOfDay);
+      endHour = end.hour();
+      endMinute = end.minute();
+    }
+
+    const query = {
+      topic,
+      timestamp: { $gte: fromDate, $lte: toDate },
+    };
+
+    if (minValue !== undefined || maxValue !== undefined) {
+      query.message = {};
+      if (minValue !== undefined) query.message.$gte = parseFloat(minValue);
+      if (maxValue !== undefined) query.message.$lte = parseFloat(maxValue);
+    }
+
+    let messages = await MessagesModel.find(query).lean();
+
+    if (startTimeOfDay && endTimeOfDay) {
+      messages = messages.filter((msg) => {
+        const timestamp = moment.tz(msg.timestamp, "Asia/Kolkata");
+        const hour = timestamp.hour();
+        const minute = timestamp.minute();
+
+        const startMinutes = startHour * 60 + startMinute;
+        const endMinutes = endHour * 60 + endMinute;
+        const currentMinutes = hour * 60 + minute;
+
+        return startMinutes <= endMinutes
+          ? currentMinutes >= startMinutes && currentMinutes <= endMinutes
+          : currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+      });
+    } else if (startTimeOfDay) {
+      messages = messages.filter((msg) => {
+        const timestamp = moment.tz(msg.timestamp, "Asia/Kolkata");
+        const currentMinutes = timestamp.hour() * 60 + timestamp.minute();
+        return currentMinutes >= startHour * 60 + startMinute;
+      });
+    } else if (endTimeOfDay) {
+      messages = messages.filter((msg) => {
+        const timestamp = moment.tz(msg.timestamp, "Asia/Kolkata");
+        const currentMinutes = timestamp.hour() * 60 + minute;
+        return currentMinutes <= endHour * 60 + endMinute;
+      });
+    }
+
+    if (sortOrder) {
+      messages.sort((a, b) =>
+        sortOrder === "asc"
+          ? new Date(a.timestamp) - new Date(b.timestamp)
+          : new Date(b.timestamp) - new Date(a.timestamp),
+      );
+    }
+
+    if (limit) messages = messages.slice(0, parseInt(limit));
+
+    if (!messages.length) {
+      return res.json({ topic, messages: [] });
+    }
+
+    const groupedMessages = processMessages(
+      messages,
+      granularity,
+      aggregationMethod || "average",
+    );
+    const response = { success: true, topic, messages: groupedMessages };
+
+    await safeRedisSet(cacheKey, response, TTL_SHORT);
+    res.json(response);
+  } catch (error) {
+    console.error("Error fetching custom range data:", error);
+    res.status(500).send("Internal Server Error");
   }
 });
