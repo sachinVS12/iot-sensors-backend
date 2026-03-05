@@ -1965,3 +1965,55 @@ router.get("/get", async (req, res) => {
       .json({ error: "Internal server error", details: error.message });
   }
 });
+
+router.get("/is-subscribed", (req, res) => {
+  const { topic } = req.query;
+  if (!topic)
+    return res
+      .status(400)
+      .json({ success: false, message: "Topic is required" });
+
+  const isSubscribed = isTopicSubscribed(topic);
+  res.json({ success: true, isSubscribed });
+});
+
+router.post("/unsubscribe", (req, res) => {
+  const { topic } = req.body;
+  if (!topic)
+    return res
+      .status(400)
+      .json({ success: false, message: "Topic is required" });
+
+  unsubscribeFromTopic(topic);
+  res.json({ success: true, message: `Unsubscribed from topic: ${topic}` });
+});
+
+const getDayRange = (date) => {
+  const start = new Date(date.setHours(0, 0, 0, 0));
+  const end = new Date(date.setHours(23, 59, 59, 999));
+  return { start, end };
+};
+
+router.get("/todays-highest", async (req, res) => {
+  const { topic } = req.query;
+  const { start, end } = getDayRange(new Date());
+  const cacheKey = `${CACHE_PREFIX}today-highest:${topic}`;
+
+  const cachedData = await safeRedisGet(cacheKey);
+  if (cachedData) return res.status(200).json(JSON.parse(cachedData));
+
+  try {
+    const result = await MessagesModel.findOne({
+      topic,
+      timestamp: { $gte: start, $lte: end },
+    })
+      .sort({ message: -1 })
+      .lean();
+
+    const response = result || { message: "No data available" };
+    await safeRedisSet(cacheKey, response, TTL_SHORT);
+    res.status(200).json(response);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
