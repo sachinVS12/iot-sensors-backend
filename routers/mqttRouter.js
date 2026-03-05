@@ -2017,3 +2017,69 @@ router.get("/todays-highest", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// subscribe
+router.get("/last-7-days-highest", async (req, res) => {
+  const { topic } = req.query;
+  const last7Days = new Date();
+  last7Days.setDate(last7Days.getDate() - 7);
+  const cacheKey = `${CACHE_PREFIX}last7days-highest:${topic}`;
+
+  const cachedData = await safeRedisGet(cacheKey);
+  if (cachedData) return res.status(200).json(JSON.parse(cachedData));
+
+  try {
+    const result = await MessagesModel.findOne({
+      topic,
+      timestamp: { $gte: last7Days },
+    })
+      .sort({ message: -1 })
+      .lean();
+
+    const response = result || { message: "No data available" };
+    await safeRedisSet(cacheKey, response, TTL_MEDIUM);
+    res.status(200).json(response);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/topic-based-latest-message", async (req, res) => {
+  const { topic } = req.body;
+
+  if (!topic) {
+    return res.status(400).json({
+      success: false,
+      message: "Topic is required in the request body.",
+    });
+  }
+
+  try {
+    const latestMessage = await MessagesModel.findOne({ topic })
+      .sort({ timestamp: -1 })
+      .lean();
+
+    if (!latestMessage) {
+      return res.status(404).json({
+        success: false,
+        message: "No messages found for the given topic.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        topic,
+        timestamp: latestMessage.timestamp.toISOString(),
+        message: latestMessage.message,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching latest message:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      details: error.message,
+    });
+  }
+});
