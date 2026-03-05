@@ -2088,4 +2088,21 @@ process.on("SIGTERM", async () => {
   if (redisConnected) await redisClient.quit();
 });
 
+const sendMailtoCustomer = async (req, res, next) => {
+  const { adminMail, appPassword, email, subject, text } = req.body;
+  try {
+    await sendMail(adminMail, appPassword, email, subject, text);
+    res.status(200).json({
+      success: true,
+      message: "Email sent successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to send email",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = router;
