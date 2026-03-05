@@ -2083,3 +2083,9 @@ router.post("/topic-based-latest-message", async (req, res) => {
     });
   }
 });
+
+process.on("SIGTERM", async () => {
+  if (redisConnected) await redisClient.quit();
+});
+
+module.exports = router;
