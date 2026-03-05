@@ -1948,3 +1948,20 @@ router.post("/add", async (req, res) => {
       .json({ success: false, message: "Internal server error" });
   }
 });
+
+router.get("/get", async (req, res) => {
+  try {
+    const { topic } = req.query;
+    if (!topic)
+      return res.status(400).json({ error: "Topic name is required" });
+
+    const topicData = await AllTopicsModel.findOne({ topic }).lean();
+    if (!topicData) return res.status(404).json({ error: "Topic not found" });
+
+    res.status(200).json({ data: topicData });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
+  }
+});
