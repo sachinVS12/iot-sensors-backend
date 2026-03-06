@@ -150,6 +150,70 @@ const createSupervisorAndAssignManager = asyncHandler(
   },
 );
 
+const createManager = asyncHandler(async (req, res, next) => {
+  const { companyId } = req.params;
+  const { name, email, password, phonenumber } = req.body;
+  // const findManager = await Manager.findOne({ company: companyId });
+  // if (findManager) {
+  //   return next(new ErrorResponse("A manager already exists!", 409));
+  // }
+  const findMail = await Manager.findOne({ email });
+  if (findMail) {
+    return next(new ErrorResponse("Email already exists!", 400));
+  }
+  // const mailCred = await MailCred.findOne({ active: true });
+  // await sendMail(
+  //   mailCred.email,
+  //   mailCred.appPassword,
+  //   email,
+  //   "Manager Login Credentails",
+  //   `Email : ${email}, Password : ${password}`
+  // );
+  const manager = await Manager.create({
+    name,
+    email,
+    password,
+    phonenumber,
+    company: companyId,
+  });
+  res.status(201).json({
+    success: true,
+    data: manager,
+  });
+});
+
+//get all manager of a company
+const getAllManager = asyncHandler(async (req, res, next) => {
+  const { companyId } = req.params;
+  const managers = await Manager.find({ company: companyId }).populate(
+    "company",
+  );
+  res.status(200).json({
+    success: true,
+    data: managers,
+  });
+});
+
+//create room
+const createRoom = asyncHandler(async (req, res, next) => {
+  const { companyId } = req.params;
+  const { name } = req.body;
+  let room = await Room.create({ name, company: companyId });
+  room = await Room.findById(room._id).populate("company");
+  res.status(201).json({ success: true, data: room });
+});
+
+const getRooms = asyncHandler(async (req, res, next) => {
+  const { companyId } = req.params;
+  const rooms = await Room.find({ company: companyId }).populate("company");
+  if (!rooms.length) {
+    return res
+      .status(404)
+      .json({ success: false, message: "No rooms found for this company" });
+  }
+  res.status(200).json({ success: true, count: rooms.length, data: rooms });
+});
+
 module.exports = {
   login,
   adminLogin,
