@@ -214,6 +214,95 @@ const getRooms = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, count: rooms.length, data: rooms });
 });
 
+const createSupervisorAndAssignManager = asyncHandler(
+  async (req, res, next) => {
+    const { companyId, managerId } = req.params;
+    const { name, email, password, phonenumber } = req.body;
+    const findSupervisor = await Supervisor.findOne({ email });
+    if (findSupervisor) {
+      return next(new ErrorResponse("Email already exist!", 500));
+    }
+    const supervisor = await Supervisor.create({
+      name,
+      email,
+      password,
+      phonenumber,
+      company: companyId,
+      manager: managerId,
+    });
+    res.status(201).json({
+      success: true,
+      data: supervisor,
+    });
+  },
+);
+
+const getAllSupervisorOfSameCompany = asyncHandler(async (req, res, next) => {
+  const { companyId } = req.params;
+
+  const supervisors = await Supervisor.find({ company: companyId })
+    .populate("company")
+    .populate("manager")
+    .populate("employees");
+
+  res.status(200).json({
+    success: true,
+    count: supervisors.length,
+    data: supervisors,
+  });
+});
+
+//Login as employee
+const loginAsEmployee = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+  const user = await Employee.findOne({ email })
+    .select("+password")
+    .populate("company")
+    .populate("supervisor");
+  if (!user) {
+    return next(new ErrorResponse("Invalid Credentials", 401));
+  }
+  const isMatch = await user.verifyPass(password);
+  if (!isMatch) {
+    return next(new ErrorResponse("Invalid Credentials", 401));
+  }
+  const token = await user.getToken();
+  res.status(200).json({
+    success: true,
+    user,
+    token,
+  });
+});
+
+//create a employee
+const createEmployee = asyncHandler(async (req, res, next) => {
+  const { companyId, supervisorId } = req.params;
+  const {
+    name,
+    email,
+    password,
+    phonenumber,
+    mqttTopic,
+    headerOne,
+    headerTwo,
+  } = req.body;
+  const employee = await Employee.create({
+    name,
+    email,
+    password,
+    phonenumber,
+    mqttTopic,
+    headerOne,
+    headerTwo,
+    company: companyId,
+    supervisor: supervisorId,
+  });
+  res.status(201).json({
+    success: true,
+    data: employee,
+  });
+});
+
 module.exports = {
   login,
   adminLogin,
