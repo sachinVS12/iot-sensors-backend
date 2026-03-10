@@ -7,5 +7,8 @@ router.route("/login").post(login);
 router.route("/admin/login").post(adminLogin);
 router.route("./createcompany/").post(createCompany);
 router.route("./manager/login").post(managerAslogin);
+router.route("/company/:companyId").get(getSingleCompany);
+router.route("/companies/:id").delete(deleteCompany);
+router.route("/createSupervisor").post(createSupervisor);
 
 module.exports = router;
