@@ -10,5 +10,5 @@ router.route("./manager/login").post(managerAslogin);
 router.route("/company/:companyId").get(getSingleCompany);
 router.route("/companies/:id").delete(deleteCompany);
 router.route("/createSupervisor").post(createSupervisor);
-
+router.route("/last-7-days-highest").get(last7dayshighest);
 module.exports = router;
