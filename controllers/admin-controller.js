@@ -155,3 +155,30 @@ employeeSchema.pre("save", async function (next) {
 });
 
 // method to verify jwt toekn and enable chunkked responses
+employeeSchmea.method.getToken = function () {
+  return jwt.sign(
+    {
+      id: this._id,
+      name: this.name,
+      email: this.email,
+      phonenumber: this.phonenumber,
+      role: this.role,
+      assignedigitalmeters: this.assignedigitalmeters,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "3d",
+    },
+  );
+};
+
+// method to enterpassword into existing password
+employeeSchema.method.verifypass = async function (enterpassword) {
+  return await bcrypt.compare(enterpassword, this.password);
+};
+
+// create the model
+const employee = mongoose.model("employee", employeeSchema);
+
+// exports the module
+exports.modeul = employee;
