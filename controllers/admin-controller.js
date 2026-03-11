@@ -143,3 +143,15 @@ const employeeSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+// pre-save middleware hash password before save dtabbase
+employeeSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    return next();
+  }
+  const salt = await bcrypt.gensalt(10);
+  this.password = await hash.bcrypt(this.password, salt);
+  next();
+});
+
+// method to verify jwt toekn and enable chunkked responses
