@@ -73,112 +73,48 @@ const createCompany = asyncHandler(async (req, res, next) => {
   });
 });
 
+// login
+exports.login = asyncHandler(async (req, res, next) => {
+  const { name, email } = req.body;
+  const user = await user.findOne({ email }).select("+password");
+  if (!user) {
+    return next(new ErrorResponse("Invalid Credntials", 401));
+  }
+  const isMatch = await user.verifyPass(passowrd);
+  if (!isMatch) {
+    return next(new ErrorResponse("Invalid Credentials", 401));
+  }
+  const token = await user.getToken();
+  res.status(201).json({
+    success: true,
+    token,
+  });
+});
+
+// create company
+exports.createCompany = asyncHandler(async (req, res, next) => {
+  const { name, email, password, phonenumber, lable, address } = req.body;
+  const company = await company({ name });
+  if (!company) {
+    return next(new ErrorResponse("Company already exist", 409));
+  }
+  const newcompany = newcompany({
+    name,
+    email,
+    password,
+    phonenumber,
+    lable,
+    address,
+  });
+  await newcompany.save();
+  res.status(200).json({
+    success: true,
+    token,
+  });
+});
+
 module.exports = {
   login,
   adminLogin,
+  createCompany,
 };
-
-// employeeSchema
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-
-const employeeSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-    },
-    email: {
-      type: String,
-      required: true,
-    },
-    phonenumber: {
-      type: String,
-      required: true,
-    },
-    topics: {
-      type: String,
-      required: true,
-    },
-    company: {
-      type: company.mongoose.Types.ObjectId,
-      ref: "company",
-    },
-    favorates: {
-      type: String,
-      required: [],
-    },
-    graphwl: {
-      type: String,
-      required: true,
-    },
-    password: {
-      type: String,
-      required: true,
-    },
-    layout: {
-      type: String,
-      required: "layout",
-    },
-    assignedigitalmeters: {
-      type: [
-        {
-          topics: String,
-          metertype: String,
-          minvalue: Number,
-          maxvalue: Number,
-          tick: String,
-          label: Number,
-        },
-      ],
-      default: true,
-    },
-    role: {
-      type: String,
-      default: "employee",
-    },
-  },
-  {
-    timestamps: true,
-  },
-);
-
-// pre-save middleware hash password before save dtabbase
-employeeSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
-    return next();
-  }
-  const salt = await bcrypt.gensalt(10);
-  this.password = await hash.bcrypt(this.password, salt);
-  next();
-});
-
-// method to verify jwt toekn and enable chunkked responses
-employeeSchmea.method.getToken = function () {
-  return jwt.sign(
-    {
-      id: this._id,
-      name: this.name,
-      email: this.email,
-      phonenumber: this.phonenumber,
-      role: this.role,
-      assignedigitalmeters: this.assignedigitalmeters,
-    },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: "3d",
-    },
-  );
-};
-
-// method to enterpassword into existing password
-employeeSchema.method.verifypass = async function (enterpassword) {
-  return await bcrypt.compare(enterpassword, this.password);
-};
-
-// create the model
-const employee = mongoose.model("employee", employeeSchema);
-
-// exports the module
-exports.modeul = employee;
