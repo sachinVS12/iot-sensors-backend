@@ -77,3 +77,69 @@ module.exports = {
   login,
   adminLogin,
 };
+
+// employeeSchema
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+const employeeSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+    },
+    email: {
+      type: String,
+      required: true,
+    },
+    phonenumber: {
+      type: String,
+      required: true,
+    },
+    topics: {
+      type: String,
+      required: true,
+    },
+    company: {
+      type: company.mongoose.Types.ObjectId,
+      ref: "company",
+    },
+    favorates: {
+      type: String,
+      required: [],
+    },
+    graphwl: {
+      type: String,
+      required: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    layout: {
+      type: String,
+      required: "layout",
+    },
+    assignedigitalmeters: {
+      type: [
+        {
+          topics: String,
+          metertype: String,
+          minvalue: Number,
+          maxvalue: Number,
+          tick: String,
+          label: Number,
+        },
+      ],
+      default: true,
+    },
+    role: {
+      type: String,
+      default: "employee",
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
