@@ -112,9 +112,38 @@ exports.createCompany = asyncHandler(async (req, res, next) => {
     token,
   });
 });
+//create a employee
+const createEmployee = asyncHandler(async (req, res, next) => {
+  const { companyId, supervisorId } = req.params;
+  const {
+    name,
+    email,
+    password,
+    phonenumber,
+    mqttTopic,
+    headerOne,
+    headerTwo,
+  } = req.body;
+  const employee = await Employee.create({
+    name,
+    email,
+    password,
+    phonenumber,
+    mqttTopic,
+    headerOne,
+    headerTwo,
+    company: companyId,
+    supervisor: supervisorId,
+  });
+  res.status(201).json({
+    success: true,
+    data: employee,
+  });
+});
 
 module.exports = {
   login,
   adminLogin,
   createCompany,
+  createEmployee,
 };
