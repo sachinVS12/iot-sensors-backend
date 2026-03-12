@@ -54,9 +54,13 @@ const employeeSchema = new mongoose.Schema(
       ],
       default: true,
     },
+    role: {
+      type: String,
+      default: "employee",
+    },
   },
   {
-    expirein: "3d",
+    timestamps: true,
   },
 );
 
@@ -69,3 +73,32 @@ employeeSchema.pre("save", async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
+
+// method to verify jwt Token signedup and loggedin
+employeeSchema.method.getToken = function () {
+  return jwt.sign(
+    {
+      id: this._id,
+      name: this.name,
+      email: this.email,
+      phonenumber: this.phonenumber,
+      role: this.role,
+      assigneddigitalmeters: this.assigndigitalmeters,
+    },
+    process.env.JWT_SECRET,
+    {
+      expireIn: "3d",
+    },
+  );
+};
+
+// method to enterpassword int existing password
+employeeSchema.method.verifypass = async function (enterpassword) {
+  return await bcrypt.compare(this.password, enterpassword);
+};
+
+// create the model
+const employee = mongoose.model("employee", employeeSchema);
+
+// exports module
+exports.modeul = employee;
