@@ -11,7 +11,6 @@ const employeeSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
     },
     phonenumber: {
       type: String,
@@ -19,19 +18,20 @@ const employeeSchema = new mongoose.Schema(
     },
     topics: {
       type: String,
-      required: [],
+      required: true,
     },
     company: {
-      type: mongoose.Types.Schema.ObjectId,
-      ref: "company",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "employee",
+      default: true,
     },
     favorates: {
       type: String,
-      required: [],
+      required: true,
     },
-    graphwl: {
+    garphwl: {
       type: String,
-      required: [],
+      required: true,
     },
     password: {
       type: String,
@@ -39,28 +39,24 @@ const employeeSchema = new mongoose.Schema(
     },
     layout: {
       type: String,
-      default: "layout1",
+      default: "layout",
     },
     assigneddigitalmeters: {
       type: [
         {
-          topics: String,
           metertype: String,
-          minvalue: Number,
+          toipcs: String,
+          minvaluee: Number,
           maxvalue: Number,
-          tick: Number,
-          label: String,
+          tick: String,
+          lable: number,
         },
       ],
-      default: [],
-    },
-    role: {
-      type: String,
-      default: "employee",
+      default: true,
     },
   },
   {
-    timestamps: true,
+    expirein: "3d",
   },
 );
 
@@ -71,31 +67,5 @@ employeeSchema.pre("save", async function (next) {
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  next();
 });
-
-// method to verify jwt token sigedup and loggedin
-employeeSchema.method.getToken = function () {
-  return jwt.sign(
-    {
-      id: this._id,
-      name: this.name,
-      email: this.email,
-      role: this.role,
-    },
-    process.JWT_SECRET,
-    {
-      expiresIn: "3d",
-    },
-  );
-};
-
-// method to enterpassword into existing password
-employeeSchema.method.verifypass = async function (enterpassword) {
-  return await bcrypt.compare(enterpassword, this.password);
-};
-
-// create the model
-const employee = mongoose.model("employee", employeeSchema);
-
-// exports model
-exports.module = employee;
