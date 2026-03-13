@@ -141,9 +141,31 @@ const createEmployee = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Manager login
+const loginAsManager = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+  const user = await Manager.findOne({ email })
+    .select("+password")
+    .populate("company");
+  if (!user) {
+    return next(new ErrorResponse("Invalid Credentials", 401));
+  }
+  const isMatch = await user.verifyPass(password);
+  if (!isMatch) {
+    return next(new ErrorResponse("Invalid Credentials", 401));
+  }
+  const token = await user.getToken();
+  res.status(200).json({
+    success: true,
+    user,
+    token,
+  });
+});
+
 module.exports = {
   login,
   adminLogin,
   createCompany,
   createEmployee,
+  loginAsManager,
 };
