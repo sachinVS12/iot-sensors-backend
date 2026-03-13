@@ -162,10 +162,25 @@ const loginAsManager = asyncHandler(async (req, res, next) => {
   });
 });
 
+//delete manager
+const deleteManager = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const manager = await Manager.findById(id);
+  if (!manager) {
+    return nect(new ErrorResponse(`No manager found with id ${id}`, 404));
+  }
+  await manager.deleteOne();
+  res.status(200).json({
+    success: true,
+    data: [],
+  });
+});
+
 module.exports = {
   login,
   adminLogin,
   createCompany,
   createEmployee,
   loginAsManager,
+  deleteManager,
 };
