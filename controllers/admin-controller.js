@@ -176,6 +176,20 @@ const deleteManager = asyncHandler(async (req, res, next) => {
   });
 });
 
+// getsinglemanager
+const getSinlgeManager = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const manager = await Manager.findById(id).populate("company");
+  if (!manager) {
+    return next(new ErrorResponse(`No manager found with id ${id}`, 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    data: manager,
+  });
+});
+
 module.exports = {
   login,
   adminLogin,
