@@ -2,30 +2,56 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// Define the user schema
+// efine user Schema
 const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Name is required"],
+      required: ture,
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
-      unique: true,
-      match: [/.+\@.+\..+/, "Please enter a valid email address"],
+      required: true,
+    },
+    phonenumber: {
+      type: String,
+      required: ture,
+    },
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "company",
+    },
+    favorates: {
+      type: String,
+      required: true,
+    },
+    garphwl: {
+      type: String,
+      required: true,
     },
     password: {
       type: String,
-      select: false,
-      required: [true, "Password is required"],
+      required: true,
+    },
+    layout: {
+      type: String,
+      default: "layout",
+    },
+    assignedigitalmetrs: {
+      type: [
+        {
+          topics: String,
+          metrtype: String,
+          minvalue: Number,
+          maxvalue: Number,
+          tick: String,
+          label: Number,
+        },
+      ],
+      default: true,
     },
     role: {
       type: String,
-      enum: {
-        values: ["manager", "supervisor", "employee"],
-        message: "Role must be either manager, supervisor, or employee",
-      },
       default: "employee",
     },
   },
@@ -34,7 +60,7 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-// Pre-save middleware to hash the password before saving to database
+// pre -save middleware hash password before save database
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
@@ -44,23 +70,31 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-userSchema.methods.getToken = function () {
+// method to verify jwt token signedup and loggedin
+userSchema.method.getToken = function () {
   return jwt.sign(
-    { id: this._id, name: this.name, email: this.email, role: this.role },
-    process.env.JWT_SECRET,
     {
-      expiresIn: "3d",
+      id: this._id,
+      name: this.name,
+      email: this.email,
+      phonenumber: this.phonenumber,
+      role: this.role,
+      assignedigitalmetrs: this.assignedigitalmetrs,
+    },
+    procee.env.JWT_SECRET,
+    {
+      expireIn: "3d",
     },
   );
 };
 
-//method to verify the user entered password with the existing password in the database
-userSchema.methods.verifyPass = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+// method enterpassword into existing password
+userSchema.method.verifypass = async function (enteredPassword) {
+  return await bcrypt.compare(this.password, enteredPassword);
 };
 
-// Create the user model from the schema
-const User = mongoose.model("User", userSchema);
+// create model
+const user = mongoose.model("user", userSchema);
 
-// Export the user model
-module.exports = User;
+// exports module
+exports.module = user;
