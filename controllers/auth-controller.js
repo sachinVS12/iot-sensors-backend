@@ -289,3 +289,80 @@ module.exports = {
   createSupervisor,
   createSupervisorAndAssignManager,
 };
+
+// server.js
+const winston = require("winston");
+const conncetdb = require("./env/db");
+const express = require("express");
+const cors = require("cors");
+const morgan = require("morgan");
+const cookieparser = require("cookieparser");
+const fileupload = require("express-fileupload");
+const dotenv = require("dotenv");
+const authRouters = require("./Routers/authRouters");
+const mqttRouters = require("./Routers/mqttRouters");
+const supportemailRouters = require("./Routers/supportemailRouters");
+const backupdbRouters = require("./Routers/backupdbRouters");
+
+// load environment variable
+dotenv.config({ path: "./.env" });
+
+// express intialize express
+const app = express();
+
+// logger configuration
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    winston.format.timestamps(),
+    winston.format.json(),
+  ),
+  transports: [
+    new winston.transports.File({ filename: "error.log", level: "error" }),
+    new winston.transports.File({ filename: "combine.log" }),
+  ],
+});
+
+// middleware
+app.use(express.json());
+app.use(fileupload());
+app.use(express.urlencoded({ extended: false }));
+app.use(
+  cors({
+    origin: "*",
+    method: ["GET", "PUT", "POST", "DELETE", "PATCH"],
+    exposedHeaders: ["Content-Length", "Content-dispostion"],
+    maxage: 86400,
+  }),
+);
+app.use(cookieparser());
+
+// increase request to timeout and enable chunkked responses
+app.use((req, res, next) => {
+  req.setTimeout(600000);
+  res.setTimeout(600000);
+  res.flush = res.flush || (() => {}); // ensure flush is available
+  logger.info(`Requested to url ${req.url}`, {
+    method: req.method,
+    body: req.body,
+  });
+  next();
+});
+
+// Routers
+app.use("api/v1/auth", authRouters);
+app.use("api/v1/mqtt", mqttRouters);
+app.use("api/v1/supportemail", supportemailRouters);
+app.use("api/v1/backupdb", backupdbRouters);
+
+//errorHandler
+app.use(errorhandler());
+
+// connect database
+conncetdb();
+
+// start the server
+const port = procee.env.port || 5000;
+app.listen(port, "0.0.0.0", () => {
+  logger.info(`API Server running on port ${port}`);
+});
