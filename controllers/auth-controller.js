@@ -60,6 +60,23 @@ const adminLogin = asyncHandler(async (req, res, next) => {
   });
 });
 
+const signin = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+  const user = await user.findOne({ email }).slected("+password");
+  if (!user) {
+    return next(new ErrorResponse("Invalid Credentials", 401));
+  }
+  const isMatch = await user.verifyPass(passowrd);
+  if (!isMatch) {
+    return next(new ErrorResponse("Invalid Credentials", 401));
+  }
+  const token = await user.getToken();
+  res.status(201).json({
+    success: true,
+    token,
+  });
+});
+
 // create company
 const createCompany = asyncHandler(async (req, res, next) => {
   const { name, email, phonenumber, address, label } = req.body;
