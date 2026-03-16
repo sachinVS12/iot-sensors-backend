@@ -1690,24 +1690,6 @@ router.post("/report-filter-csv", async (req, res) => {
   }
 });
 
-//admin
-const admin = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body;
-  const admin = await admin.findone({ email }).select("+password");
-  if (!admin) {
-    return next(new ErrorResponse("Invalid Credentials", 401));
-  }
-  const isMatch = await verifypass(password);
-  if (!isMatch) {
-    return next(new ErrorResponse("Invalid Credentials", 401));
-  }
-  const token = await admin.getToken();
-  res.status(200).json({
-    success: true,
-    token,
-  });
-});
-
 router.post("/realtime-data/custom-range", async (req, res) => {
   const {
     topic,
