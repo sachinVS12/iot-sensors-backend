@@ -1511,6 +1511,40 @@ const removeManagerFromSupervisor = asyncHandler(async (req, res, next) => {
   });
 });
 
+const deleteAnyEmployeeCompany = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const manager = await Manager.findById(id);
+  const supervisor = await Supervisor.findById(id);
+  const employee = await Employee.findById(id);
+
+  if (manager) {
+    await manager.deleteOne();
+    return res.status(200).json({
+      success: true,
+      data: [],
+    });
+  }
+  if (supervisor) {
+    await Employee.updateMany(
+      { supervisor: supervisor.id },
+      { $unset: { supervisor: "" } },
+    );
+    await supervisor.deleteOne();
+    return res.status(200).json({
+      success: true,
+      data: [],
+    });
+  }
+  if (employee) {
+    await employee.deleteOne();
+    return res.status(200).json({
+      success: true,
+      data: [],
+    });
+  }
+  return next(new ErrorResponse(`No user found with id ${id}`, 404));
+});
+
 router.post("/report-filter-csv", async (req, res) => {
   const {
     topics,
