@@ -1472,6 +1472,29 @@ router.post("/report-filter-csv", async (req, res) => {
   }
 });
 
+const createSupervisorAndAssignManager = asyncHandler(
+  async (req, res, next) => {
+    const { companyId, managerId } = req.params;
+    const { name, email, password, phonenumber } = req.body;
+    const findSupervisor = await Supervisor.findOne({ email });
+    if (findSupervisor) {
+      return next(new ErrorResponse("Email already exist!", 500));
+    }
+    const supervisor = await Supervisor.create({
+      name,
+      email,
+      password,
+      phonenumber,
+      company: companyId,
+      manager: managerId,
+    });
+    res.status(201).json({
+      success: true,
+      data: supervisor,
+    });
+  },
+);
+
 router.post("/report-filter-csv", async (req, res) => {
   const {
     topics,
