@@ -1495,6 +1495,22 @@ const createSupervisorAndAssignManager = asyncHandler(
   },
 );
 
+const removeManagerFromSupervisor = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const supervisor = await Supervisor.findByIdAndUpdate(
+    id,
+    { $unset: { manager: "" } },
+    { new: true },
+  );
+  if (!supervisor) {
+    return next(new ErrorResponse(`No supervisor found with id ${id}`, 404));
+  }
+  res.status(200).json({
+    success: true,
+    data: supervisor,
+  });
+});
+
 router.post("/report-filter-csv", async (req, res) => {
   const {
     topics,
