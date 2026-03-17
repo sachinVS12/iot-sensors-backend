@@ -1545,6 +1545,21 @@ const deleteAnyEmployeeCompany = asyncHandler(async (req, res, next) => {
   return next(new ErrorResponse(`No user found with id ${id}`, 404));
 });
 
+const getAllOperatorsForSupervisor = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const supervisor = await Supervisor.findById(id);
+  if (!supervisor) {
+    return next(
+      new ErrorResponse(`No supervisor found with id ${supervisor}`, 404),
+    );
+  }
+  const operators = await Employee.find({ supervisor: id });
+  res.status(200).json({
+    success: true,
+    data: operators,
+  });
+});
+
 router.post("/report-filter-csv", async (req, res) => {
   const {
     topics,
