@@ -220,7 +220,7 @@ const createRoom = asyncHandler(async (req, res, next) => {
   res.status(201).json({ success: true, data: room });
 });
 
-// Rooms
+// get all Rooms
 const getRooms = asyncHandler(async (req, res, next) => {
   const { companyId } = req.params;
   const rooms = await Room.find({ company: companyId }).populate("company");
