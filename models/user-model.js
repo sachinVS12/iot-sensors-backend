@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema(
         {
           topics: String,
           metertype: String,
-          minvalue: NUmber,
+          minvalue: Number,
           maxvalue: Number,
           tick: String,
           label: Number,
