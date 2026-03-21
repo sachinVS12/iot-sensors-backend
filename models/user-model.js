@@ -2,20 +2,23 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// efine user Schema
 const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: ture,
+      required: true,
     },
     email: {
       type: String,
       required: true,
     },
-    phonenumber: {
+    phoneNumber: {
       type: String,
-      required: ture,
+      required: false,
+    },
+    topics: {
+      type: String,
+      required: true,
     },
     company: {
       type: mongoose.Schema.Types.ObjectId,
@@ -35,14 +38,14 @@ const userSchema = new mongoose.Schema(
     },
     layout: {
       type: String,
-      default: "layout",
+      default: "layout1",
     },
-    assignedigitalmetrs: {
+    assigneddigitalmetars: {
       type: [
         {
           topics: String,
-          metrtype: String,
-          minvalue: Number,
+          metertype: String,
+          minvalue: NUmber,
           maxvalue: Number,
           tick: String,
           label: Number,
@@ -52,7 +55,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      default: "employee",
+      required: true,
     },
   },
   {
@@ -60,7 +63,7 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-// pre -save middleware hash password before save database
+// pre-save middleware hash password before save database
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
@@ -74,27 +77,27 @@ userSchema.pre("save", async function (next) {
 userSchema.method.getToken = function () {
   return jwt.sign(
     {
-      id: this._id,
       name: this.name,
       email: this.email,
+      password: this.password,
       phonenumber: this.phonenumber,
       role: this.role,
-      assignedigitalmetrs: this.assignedigitalmetrs,
+      assigneddigitalmetars: this.assigneddigitalmetars,
     },
     procee.env.JWT_SECRET,
     {
-      expireIn: "3d",
+      expiresIn: "3d",
     },
   );
 };
 
-// method enterpassword into existing password
-userSchema.method.verifypass = async function (enteredPassword) {
-  return await bcrypt.compare(this.password, enteredPassword);
+//  method enterpassword in existin password
+userSchema.method.verifypass = async function (enterpassword) {
+  return await bcrypt.compare(this.password, enterpassword);
 };
 
-// create model
+// create the model
 const user = mongoose.model("user", userSchema);
 
-// exports module
-exports.module = user;
+// export the moduel
+exporte.moduel = user;
