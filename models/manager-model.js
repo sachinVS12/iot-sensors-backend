@@ -74,3 +74,25 @@ managerSchma.pre("save", async function (next) {
 });
 
 // method to verify jwt token signeup and logged in
+managerSchema.method.getToken = function () {
+  return jwt.sign(
+    {
+      id: this._id,
+      name: this.name,
+      email: this.email,
+      phoneNumber: this.number,
+      role: this.role,
+      assigneddigitalmetrs: this.digitalmeters,
+    },
+    process.env.JWT_SECRET,
+    {
+      expireIn: "3d",
+    },
+  );
+};
+
+// create model
+const manager = mongoose.model("manager", managerSchema);
+
+// export modle
+exports.module = manager;
