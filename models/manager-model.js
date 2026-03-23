@@ -11,64 +11,61 @@ const managerSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
     },
-    phonenumber: {
+    phoneNumber: {
       type: String,
-      required: false,
+      required: true,
     },
     topics: {
-      type: [String],
-      default: [],
+      type: String,
+      required: true,
     },
     company: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Company",
+      ref: "company",
+    },
+    favarate: {
+      type: String,
+      required: ture,
+    },
+    garphwl: {
+      type: String,
       required: true,
-    },
-    favorites: {
-      type: [String],
-      default: [],
-    },
-    graphwl: {
-      type: [String],
-      default: [],
     },
     password: {
       type: String,
-      select: false,
-      required: [true, "Password is required"],
+      required: true,
     },
     layout: {
       type: String,
       default: "layout1",
     },
-    assignedDigitalMeters: {
+    assigenddigitalmeters: {
       type: [
         {
-          topic: String,
-          meterType: String,
-          minValue: Number,
-          maxValue: Number,
-          ticks: Number,
+          topics: String,
+          metertype: String,
+          minvalue: Number,
+          maxvalue: Number,
+          tick: Number,
           label: String,
         },
       ],
-      default: [],
+      default: true,
     },
     role: {
       type: String,
-      default: "manager",
+      default: "employee",
     },
   },
   {
-    timestamps: true,
+    default: timestamps,
   },
 );
 
-// Pre-save middleware to hash the password before saving to database
-managerSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
+// pre-save middleware hash password save before save database
+managerSchma.pre("save", async function (next) {
+  if (!this.isModified(password)) {
     return next();
   }
   const salt = await bcrypt.genSalt(10);
@@ -76,28 +73,4 @@ managerSchema.pre("save", async function (next) {
   next();
 });
 
-// method to generate the jwt token for the loggedin or signedup users
-managerSchema.methods.getToken = function () {
-  return jwt.sign(
-    {
-      id: this._id,
-      name: this.name,
-      email: this.email,
-      role: this.role,
-      assignedDigitalMeters: this.assignedDigitalMeters,
-    },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: "3d",
-    },
-  );
-};
-
-//method to verify the user entered password with the existing password in the database
-managerSchema.methods.verifyPass = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
-};
-
-const Manager = mongoose.model("Manager", managerSchema);
-
-module.exports = Manager;
+// method to verify jwt token signeup and logged in
