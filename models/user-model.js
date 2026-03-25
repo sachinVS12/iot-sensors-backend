@@ -2,60 +2,31 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+// Define the user schema
 const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: [true, "Name is required"],
     },
     email: {
       type: String,
-      required: true,
-    },
-    phoneNumber: {
-      type: String,
-      required: false,
-    },
-    topics: {
-      type: String,
-      required: true,
-    },
-    company: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "company",
-    },
-    favorates: {
-      type: String,
-      required: true,
-    },
-    garphwl: {
-      type: String,
-      required: true,
+      required: [true, "Email is required"],
+      unique: true,
+      match: [/.+\@.+\..+/, "Please enter a valid email address"],
     },
     password: {
       type: String,
-      required: true,
-    },
-    layout: {
-      type: String,
-      default: "layout1",
-    },
-    assigneddigitalmetars: {
-      type: [
-        {
-          topics: String,
-          metertype: String,
-          minvalue: Number,
-          maxvalue: Number,
-          tick: String,
-          label: Number,
-        },
-      ],
-      default: true,
+      select: false,
+      required: [true, "Password is required"],
     },
     role: {
       type: String,
-      required: true,
+      enum: {
+        values: ["manager", "supervisor", "employee"],
+        message: "Role must be either manager, supervisor, or employee",
+      },
+      default: "employee",
     },
   },
   {
@@ -63,7 +34,7 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-// pre-save middleware hash password before save database
+// Pre-save middleware to hash the password before saving to database
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
@@ -73,31 +44,23 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-// method to verify jwt token signedup and loggedin
-userSchema.method.getToken = function () {
+userSchema.methods.getToken = function () {
   return jwt.sign(
-    {
-      name: this.name,
-      email: this.email,
-      password: this.password,
-      phonenumber: this.phonenumber,
-      role: this.role,
-      assigneddigitalmetars: this.assigneddigitalmetars,
-    },
-    procee.env.JWT_SECRET,
+    { id: this._id, name: this.name, email: this.email, role: this.role },
+    process.env.JWT_SECRET,
     {
       expiresIn: "3d",
     },
   );
 };
 
-//  method enterpassword in existin password
-userSchema.method.verifypass = async function (enterpassword) {
-  return await bcrypt.compare(this.password, enterpassword);
+//method to verify the user entered password with the existing password in the database
+userSchema.methods.verifyPass = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// create the model
-const user = mongoose.model("user", userSchema);
+// Create the user model from the schema
+const User = mongoose.model("User", userSchema);
 
-// export the moduel
-exporte.moduel = user;
+// Export the user model
+module.exports = User;
