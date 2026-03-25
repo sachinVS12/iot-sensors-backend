@@ -11,48 +11,62 @@ const employeeSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
+      unique: true,
     },
     phonenumber: {
       type: String,
       required: false,
     },
-    topics: {
-      type: String,
-      required: true,
-    },
     company: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "employee",
-      default: true,
-    },
-    favorates: {
-      type: String,
+      ref: "Company",
       required: true,
     },
-    garphwl: {
-      type: String,
-      required: true,
+    supervisor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Supervisor",
+      required: false,
     },
     password: {
       type: String,
-      required: true,
+      select: false,
+      required: [true, "Password is required"],
+    },
+    topics: {
+      type: [String],
+    },
+    favorites: {
+      type: [String],
+      default: [],
+    },
+    graphwl: {
+      type: [String],
+      default: [],
     },
     layout: {
       type: String,
-      default: "layout",
+      default: "layout1",
     },
-    assigneddigitalmeters: {
+    headerOne: {
+      type: "String",
+      required: true,
+    },
+    headerTwo: {
+      type: "String",
+      required: false,
+    },
+    assignedDigitalMeters: {
       type: [
         {
-          metertype: String,
-          toipcs: String,
-          minvaluee: Number,
-          maxvalue: Number,
-          tick: String,
-          lable: number,
+          topic: String,
+          meterType: String,
+          minValue: Number,
+          maxValue: Number,
+          ticks: Number,
+          label: String,
         },
       ],
-      default: true,
+      default: [],
     },
     role: {
       type: String,
@@ -64,7 +78,6 @@ const employeeSchema = new mongoose.Schema(
   },
 );
 
-// pre-save middleware hash password before save database
 employeeSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
@@ -74,31 +87,26 @@ employeeSchema.pre("save", async function (next) {
   next();
 });
 
-// method to verify jwt Token signedup and loggedin
-employeeSchema.method.getToken = function () {
+employeeSchema.methods.getToken = function () {
   return jwt.sign(
     {
       id: this._id,
       name: this.name,
       email: this.email,
-      phonenumber: this.phonenumber,
       role: this.role,
-      assigneddigitalmeters: this.assigndigitalmeters,
+      assignedDigitalMeters: this.assignedDigitalMeters,
     },
     process.env.JWT_SECRET,
     {
-      expireIn: "3d",
+      expiresIn: "3d",
     },
   );
 };
 
-// method to enterpassword int existing password
-employeeSchema.method.verifypass = async function (enterpassword) {
-  return await bcrypt.compare(this.password, enterpassword);
+employeeSchema.methods.verifyPass = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// create the model
-const employee = mongoose.model("employee", employeeSchema);
+const Employee = mongoose.model("Employee", employeeSchema);
 
-// exports module
-exports.modeul = employee;
+module.exports = Employee;
