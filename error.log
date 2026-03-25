@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product Form</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        padding: 20px;
+      }
+
+      h1 {
+        text-align: center;
+      }
+
+      form {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        max-width: 500px;
+        margin: 0 auto;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+
+      label {
+        display: block;
+        margin-top: 10px;
+        font-weight: bold;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 8px;
+        margin-top: 5px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+      }
+
+      button {
+        margin-top: 15px;
+        padding: 10px 15px;
+        background-color: #28a745;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #218838;
+      }
+
+      .product-display {
+        background: #fff;
+        margin: 20px auto;
+        padding: 20px;
+        border-radius: 8px;
+        max-width: 500px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+
+      .product-display h2 {
+        margin-top: 0;
+      }
+
+      .product-display p {
+        margin: 5px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Create Product</h1>
+
+    <form id="productForm">
+      <label for="name">Name:</label>
+      <input type="text" id="name" required />
+
+      <label for="description">Description:</label>
+      <textarea id="description" rows="3" required></textarea>
+
+      <label for="price">Price ($):</label>
+      <input type="number" id="price" step="0.01" required />
+
+      <label for="stock">Stock Quantity:</label>
+      <input type="number" id="stock" required />
+
+      <label for="category">Category:</label>
+      <input type="text" id="category" required />
+
+      <label for="size">Size:</label>
+      <select id="size" required>
+        <option value="">Select size</option>
+        <option value="S">Small</option>
+        <option value="M">Medium</option>
+        <option value="L">Large</option>
+        <option value="XL">Extra Large</option>
+      </select>
+
+      <label for="color">Color:</label>
+      <input type="color" id="color" value="#ff0000" required />
+
+      <button type="submit">Create Product</button>
+    </form>
+
+    <div id="productDisplay" class="product-display" style="display: none">
+      <h2>Product Details</h2>
+      <p><strong>Name:</strong> <span id="dispName"></span></p>
+      <p><strong>Description:</strong> <span id="dispDescription"></span></p>
+      <p><strong>Price:</strong> $<span id="dispPrice"></span></p>
+      <p><strong>Stock:</strong> <span id="dispStock"></span></p>
+      <p><strong>Category:</strong> <span id="dispCategory"></span></p>
+      <p><strong>Size:</strong> <span id="dispSize"></span></p>
+      <p>
+        <strong>Color:</strong>
+        <span
+          id="dispColor"
+          style="
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #000;
+          "
+        ></span>
+      </p>
+    </div>
+
+    <script>
+      const form = document.getElementById("productForm");
+      const display = document.getElementById("productDisplay");
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        // Get values
+        const name = document.getElementById("name").value;
+        const description = document.getElementById("description").value;
+        const price = parseFloat(
+          document.getElementById("price").value,
+        ).toFixed(2);
+        const stock = document.getElementById("stock").value;
+        const category = document.getElementById("category").value;
+        const size = document.getElementById("size").value;
+        const color = document.getElementById("color").value;
+
+        // Display values
+        document.getElementById("dispName").textContent = name;
+        document.getElementById("dispDescription").textContent = description;
+        document.getElementById("dispPrice").textContent = price;
+        document.getElementById("dispStock").textContent = stock;
+        document.getElementById("dispCategory").textContent = category;
+        document.getElementById("dispSize").textContent = size;
+        const colorBox = document.getElementById("dispColor");
+        colorBox.style.backgroundColor = color;
+
+        display.style.display = "block";
+
+        // Optional: reset form
+        form.reset();
+      });
+    </script>
+  </body>
+</html>
