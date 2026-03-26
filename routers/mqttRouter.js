@@ -2180,4 +2180,75 @@ parentPort.on("message", async ({ action, topics }) => {
   }
 });
 
+/* Handle Socket.IO client connections and events */
+io.on("connection", (socket) => {
+  const subscriptions = new Map();
+
+  socket.on("subscribeToTopic", async (topic) => {
+    if (!topic || subscriptions.has(topic)) return;
+
+    try {
+      socket.join(topic);
+      subscriptions.set(topic, true);
+
+      if (!activeTopics.has(topic)) {
+        activeTopics.set(topic, {
+          clients: new Set(),
+          lastMessage: null,
+          lastSentTime: null,
+          interval: null,
+        });
+        startTopicStream(topic);
+      }
+
+      activeTopics.get(topic).clients.add(socket.id);
+
+      const latestMessage = await getLatestLiveMessage(topic);
+      if (latestMessage) {
+        socket.emit("liveMessage", {
+          success: true,
+          message: latestMessage,
+          topic,
+        });
+      }
+    } catch (error) {
+      logger.error(`Subscription error for ${topic}: ${error.message}`);
+    }
+  });
+
+  socket.on("unsubscribeFromTopic", (topic) => {
+    if (subscriptions.has(topic)) {
+      socket.leave(topic);
+      subscriptions.delete(topic);
+
+      if (activeTopics.has(topic)) {
+        const topicData = activeTopics.get(topic);
+        topicData.clients.delete(socket.id);
+
+        if (topicData.clients.size === 0) {
+          clearInterval(topicData.interval);
+          activeTopics.delete(topic);
+        }
+      }
+    }
+  });
+
+  /* Clean up subscriptions on client disconnection */
+  socket.on("disconnect", () => {
+    subscriptions.forEach((_, topic) => {
+      socket.leave(topic);
+
+      if (activeTopics.has(topic)) {
+        const topicData = activeTopics.get(topic);
+        topicData.clients.delete(socket.id);
+
+        if (topicData.clients.size === 0) {
+          clearInterval(topicData.interval);
+          activeTopics.delete(topic);
+        }
+      }
+    });
+    subscriptions.clear();
+  });
+});
 module.exports = router;
