@@ -21,3 +21,19 @@ router.use((req, res, next) => {
   req.io = req.app.get("socketio");
   next();
 });
+
+router.post("/", handleMessage);
+router.get("/", getMessages);
+router.get("/getSoftDeletedMessage", getAllSoftDeletedMessage);
+router.delete("/:id", deleteMessage);
+router.delete("/deleteMailCred/:id", deleteMailCredential);
+router.get("/allMailCred", getAllMails);
+router.post("/setActiveMailCred/:id", setActiveMailCred);
+router.post("/softDelete/:id", softDeleteMessage);
+router.post("/softDelete/restore/:id", restoreSoftDeleteMessage);
+router.post("/sendreply", sendMailtoCustomer);
+router.post("/mailCred", addMailCredentials);
+router.get("/mailCred", getMailCredentials);
+router.post("/createMailCredSetActive", createMailCredAndSetActive);
+
+module.exports = router;
