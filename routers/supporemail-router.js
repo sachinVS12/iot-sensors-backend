@@ -36,4 +36,29 @@ router.post("/mailCred", addMailCredentials);
 router.get("/mailCred", getMailCredentials);
 router.post("/createMailCredSetActive", createMailCredAndSetActive);
 
+const express = require("express");
+
+const app = express();
+
+app.use(express.json());
+
+app.use(express.urlencoded({ extended: true }));
+
+app.get("/", (req, res) => {
+  res.status(200).json({ mesaage: `My Name is SachinTendulkar` });
+});
+
+app.get("/login", (req, res) => {
+  res.status(200).json({ mesaage: `My Role Software Engineer` });
+});
+
+app.get("/login/signup", (req, res) => {
+  res.status(200).json({
+    mesaage: `My Native is Mysore. But I am Currently Staying Banglore.`,
+  });
+});
+
+const port = process.env.port || 5000;
+app.listen(port, () => console.log(`listening on port ${port}`));
+
 module.exports = router;
