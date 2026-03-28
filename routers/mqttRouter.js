@@ -2251,4 +2251,29 @@ io.on("connection", (socket) => {
     subscriptions.clear();
   });
 });
+
+router.get("/get", async (req, res) => {
+  try {
+    const { topic } = req.query;
+    if (!topic) {
+      return res
+        .status(400)
+        .json({ success: false, message: "topic is required" });
+    }
+
+    const rawTopic = decodeURIComponent(topic);
+    const topicDoc = await AllTopicsModel.findOne({ topic: rawTopic })
+      .select("thresholds -_id")
+      .lean();
+    const thresholds = topicDoc?.thresholds || [];
+
+    return res.status(200).json({ success: true, data: { thresholds } });
+  } catch (error) {
+    console.error("Error fetching thresholds:", error.message);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+});
+
 module.exports = router;
