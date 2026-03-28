@@ -2363,4 +2363,28 @@ router.post("/unsubscribe", (req, res) => {
   res.json({ success: true, message: `Unsubscribed from topic: ${topic}` });
 });
 
+router.get("/todays-highest", async (req, res) => {
+  const { topic } = req.query;
+  const { start, end } = getDayRange(new Date());
+  const cacheKey = `${CACHE_PREFIX}today-highest:${topic}`;
+
+  const cachedData = await safeRedisGet(cacheKey);
+  if (cachedData) return res.status(200).json(JSON.parse(cachedData));
+
+  try {
+    const result = await MessagesModel.findOne({
+      topic,
+      timestamp: { $gte: start, $lte: end },
+    })
+      .sort({ message: -1 })
+      .lean();
+
+    const response = result || { message: "No data available" };
+    await safeRedisSet(cacheKey, response, TTL_SHORT);
+    res.status(200).json(response);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
