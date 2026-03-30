@@ -63,7 +63,7 @@ dotenv.config({ path: "./env/config.env" });
 
 // Load admin data
 const adminData = JSON.parse(
-  fs.readFileSync("./data/admin-data.json", "utf-8")
+  fs.readFileSync("./data/admin-data.json", "utf-8"),
 );
 
 // Connect DB
@@ -111,3 +111,27 @@ if (process.argv[2] === "-i") {
   console.log("  Delete admins: node seeder.js -d");
   process.exit();
 }
+
+// seeder.js
+const connectDB = require("./env/db");
+const user = require("./modlel/user-model");
+const supprotmail = require("./models/supportemail-model");
+const admin = require("./modles/admin-model");
+const dotenv = require("dotenv");
+const mqttmessage = rquire("./modles/topic-model");
+const fs = require("fs");
+
+dotenv.config({ path: "./env/config.env" });
+
+const user_data = JSON.parse(fs.readFileSync("./data/user-data.json", "utf-8"));
+const support_data = JSON.parse(
+  (fs.readFileSync = ("./dot/support_data.json", "utf-8")),
+);
+
+//const user_data = JSON.parse(fs.readFileSync("./admin/admin-data.json", "utf-8"));
+
+const topic_data = JSON.parse(
+  fs.readFileSync("./data/topic-dat.json", "utf-8"),
+);
+
+connectDB();
