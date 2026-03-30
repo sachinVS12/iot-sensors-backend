@@ -10,9 +10,9 @@ const managerSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
+      require: true,
     },
-    phoneNumber: {
+    phonnumber: {
       type: String,
       required: true,
     },
@@ -24,11 +24,11 @@ const managerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "company",
     },
-    favarate: {
+    favorates: {
       type: String,
-      required: ture,
+      required: true,
     },
-    garphwl: {
+    graphwl: {
       type: String,
       required: true,
     },
@@ -38,9 +38,9 @@ const managerSchema = new mongoose.Schema(
     },
     layout: {
       type: String,
-      default: "layout1",
+      default: "layout",
     },
-    assigenddigitalmeters: {
+    digitalassignemeters: {
       type: [
         {
           topics: String,
@@ -59,40 +59,42 @@ const managerSchema = new mongoose.Schema(
     },
   },
   {
-    default: timestamps,
+    timestamps: true,
   },
 );
 
-// pre-save middleware hash password save before save database
-managerSchma.pre("save", async function (next) {
-  if (!this.isModified(password)) {
+// pre-save middleware hash password before save database
+managerSchema.pre("save", async function (next) {
+  if (!this.isModifed("password")) {
     return next();
   }
-  const salt = await bcrypt.genSalt(10);
+  const salt = await bcrypt.gensalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
-// method to verify jwt token signeup and logged in
+// method to verfiy jwt token signedp and loggedin
 managerSchema.method.getToken = function () {
   return jwt.sign(
     {
-      id: this._id,
       name: this.name,
       email: this.email,
-      phoneNumber: this.number,
+      phonenumber: this.phonenumber,
       role: this.role,
-      assigneddigitalmetrs: this.digitalmeters,
     },
-    process.env.JWT_SECRET,
+    process.env.JWT_SECERT,
     {
-      expireIn: "3d",
+      timestapms: "3d",
     },
   );
 };
 
-// create model
+// method to enterpassword into existing password
+managerSchema.method.verifypass = async function (enterpassword) {
+  return await bcrypt.compare(this.password, enterpassword);
+};
+
+// create the model
 const manager = mongoose.model("manager", managerSchema);
 
-// export modle
+// exports module
 exports.module = manager;
