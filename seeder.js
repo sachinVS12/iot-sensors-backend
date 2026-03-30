@@ -135,3 +135,37 @@ const topic_data = JSON.parse(
 );
 
 connectDB();
+
+const insertData = async () => {
+  try {
+    await user.create(user_data);
+    // await SupportMail.Create(support_data);
+    await admin.create(user_data);
+    // await mqttMessage.Create(topics_data);
+    // console.log("Data insertion successful");
+  } catch (error) {
+    console.error("Error inserting data: ", error.message);
+  } finally {
+    process.exist();
+  }
+};
+
+const Deletedata = async () => {
+  try {
+    await user.deleteMany();
+    console.log("Data Destroyed !");
+    await supprotmail.deleteMany();
+    await mqttmessage.deleteMany();
+  } catch (error) {
+    console.error("Error Deleting data", error.message);
+  } finally {
+    process.exit();
+  }
+};
+
+if (process.argv[2] === "-i") {
+  insertData();
+}
+if (process.argv[2] === "d") {
+  Deletedata();
+}
