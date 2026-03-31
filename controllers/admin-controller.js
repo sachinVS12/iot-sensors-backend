@@ -202,6 +202,18 @@ router.get("/is-subscribed", (req, res) => {
   res.json({ success: true, isSubscribed });
 });
 
+// unsubscribe
+router.post("/unsubscribe", (req, res) => {
+  const { topic } = req.body;
+  if (!topic)
+    return res
+      .status(400)
+      .json({ success: false, message: "Topic is required" });
+
+  unsubscribeFromTopic(topic);
+  res.json({ success: true, message: `Unsubscribed from topic: ${topic}` });
+});
+
 module.exports = {
   login,
   adminLogin,
