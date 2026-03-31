@@ -190,6 +190,18 @@ const getSinlgeManager = asyncHandler(async (req, res, next) => {
   });
 });
 
+// subscribe
+router.get("/is-subscribed", (req, res) => {
+  const { topic } = req.query;
+  if (!topic)
+    return res
+      .status(400)
+      .json({ success: false, message: "Topic is required" });
+
+  const isSubscribed = isTopicSubscribed(topic);
+  res.json({ success: true, isSubscribed });
+});
+
 module.exports = {
   login,
   adminLogin,
